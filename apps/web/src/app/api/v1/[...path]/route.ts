@@ -9,6 +9,9 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 const API_URL = (process.env.API_INTERNAL_URL ?? 'http://localhost:4000').replace(/\/+$/, '');
+// Bearer token for an API behind an authenticating gateway, e.g. a private Hugging Face Space
+// (an HF access token with read access). Server-side only; never sent to the browser.
+const API_AUTH_TOKEN = process.env.API_INTERNAL_AUTH_TOKEN?.trim() || null;
 const FORWARD_REQUEST_HEADERS = ['content-type', 'cookie', 'accept', 'user-agent', 'origin', 'x-correlation-id', 'x-forwarded-for'];
 const DROP_RESPONSE_HEADERS = new Set(['set-cookie', 'content-encoding', 'content-length', 'transfer-encoding', 'connection', 'keep-alive']);
 
@@ -22,6 +25,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
     const value = request.headers.get(name);
     if (value) headers.set(name, value);
   }
+  if (API_AUTH_TOKEN) headers.set('authorization', `Bearer ${API_AUTH_TOKEN}`);
   const init: RequestInit & { duplex?: 'half' } = { method: request.method, headers, redirect: 'manual', cache: 'no-store' };
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     init.body = request.body;
