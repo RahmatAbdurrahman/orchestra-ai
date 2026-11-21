@@ -88,7 +88,7 @@ export function FileDropzone({
         className={cn(
           'group flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-8 text-center transition-[border-color,background-color,transform] duration-200',
           'focus-within:border-ring focus-within:shadow-[var(--focus-ring)]',
-          dragging ? 'scale-[1.01] border-primary bg-primary/6' : 'border-border-strong/70 hover:border-primary/50 hover:bg-muted/50',
+          dragging ? 'scale-[1.01] border-primary bg-primary-soft' : 'border-dropzone-border bg-dropzone hover:border-primary/50 hover:bg-row-hover',
           disabled && 'pointer-events-none opacity-60',
         )}
       >
@@ -111,7 +111,7 @@ export function FileDropzone({
       </label>
 
       {file ? (
-        <div className="flex animate-fade-up items-center gap-3 rounded-lg border bg-muted/40 px-3 py-2.5" aria-live="polite">
+        <div className="flex animate-fade-up items-center gap-3 rounded-lg border bg-surface-secondary px-3 py-2.5" aria-live="polite">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-md border bg-card text-primary">
             <Icon className="size-4" aria-hidden />
           </span>

@@ -93,7 +93,7 @@ function UserDialog({ draft, onClose, departments }: { draft: Draft | null; onCl
             <Label>Roles</Label>
             <div className="grid gap-2 sm:grid-cols-2">
               {ROLE_NAMES.map((role) => (
-                <label key={role} className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors hover:bg-muted/50 has-[[data-state=checked]]:border-primary/40 has-[[data-state=checked]]:bg-primary/5">
+                <label key={role} className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors hover:bg-row-hover has-[[data-state=checked]]:border-primary/40 has-[[data-state=checked]]:bg-primary/5">
                   <Checkbox checked={value.roles.includes(role)} onCheckedChange={(checked) => toggleRole(role, checked === true)} />
                   {ROLE_LABELS[role]}
                 </label>

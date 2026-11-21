@@ -76,7 +76,7 @@ export default function ProfilePage() {
                 Effective permissions ({user.permissions.length})
               </button>
               <Collapse open={showPermissions} id="effective-permissions">
-                <p className="mt-2 rounded-md border bg-muted/40 p-2.5 font-mono leading-relaxed">{user.permissions.join(', ')}</p>
+                <p className="mt-2 rounded-md border bg-surface-secondary p-2.5 font-mono leading-relaxed">{user.permissions.join(', ')}</p>
               </Collapse>
             </div>
             <form

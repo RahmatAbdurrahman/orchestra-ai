@@ -265,7 +265,7 @@ export function VerificationForm({
           </div>
 
           {lowConfidence.length > 0 ? (
-            <div className="space-y-2 rounded-lg border border-warning/50 bg-warning/8 p-3">
+            <div className="space-y-2 rounded-lg border border-warning-border bg-warning-soft/60 p-3">
               <p className="text-sm font-medium">Confirm low-confidence values</p>
               <p className="text-xs text-muted-foreground">Tick each item after you compared it with the original document.</p>
               <div className="grid gap-2 sm:grid-cols-2">

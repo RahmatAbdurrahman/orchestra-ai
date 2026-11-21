@@ -28,11 +28,11 @@ const CATEGORIES: Array<{ prefix: string; label: string; icon: LucideIcon; tone:
 
 const TONES: Record<Tone, string> = {
   neutral: 'bg-muted text-muted-foreground ring-border',
-  info: 'bg-info/10 text-info-foreground ring-info/20',
-  primary: 'bg-primary/10 text-primary ring-primary/20 dark:text-info-foreground',
-  success: 'bg-success/10 text-success-foreground ring-success/25',
-  warning: 'bg-warning/12 text-warning-foreground ring-warning/25',
-  danger: 'bg-destructive/10 text-destructive-foreground ring-destructive/25',
+  info: 'bg-info-soft text-info-foreground ring-info-border',
+  primary: 'bg-primary-soft text-primary ring-border-interactive dark:ring-primary/20 dark:text-info-foreground',
+  success: 'bg-success-soft text-success-foreground ring-success-border',
+  warning: 'bg-warning-soft text-warning-foreground ring-warning-border',
+  danger: 'bg-destructive-soft text-destructive-foreground ring-destructive-border',
 };
 
 /** Category of an audit action code, e.g. "APPROVAL.APPROVED" -> Approval. */

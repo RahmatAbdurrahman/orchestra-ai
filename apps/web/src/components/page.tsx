@@ -69,9 +69,11 @@ export function SectionLabel({ children, className }: { children: ReactNode; cla
   );
 }
 
-/** A filter/search strip that sits above a table. */
+/** A filter/search strip that sits above a table, on its own quiet surface. */
 export function Toolbar({ className, children }: { className?: string; children: ReactNode }) {
-  return <div className={cn('mb-4 flex flex-col gap-2 sm:flex-row sm:items-center', className)}>{children}</div>;
+  return (
+    <div className={cn('mb-4 flex flex-col gap-2 rounded-xl border bg-card/70 p-2 shadow-xs sm:flex-row sm:items-center', className)}>{children}</div>
+  );
 }
 
 /**
@@ -256,10 +258,10 @@ export function useCountUp(target: number | null | undefined, duration: number =
 export type StatTone = 'default' | 'success' | 'danger' | 'warning';
 
 const STAT_TONES: Record<StatTone, { tile: string; color: string }> = {
-  default: { tile: 'bg-primary/10 text-primary dark:text-info-foreground', color: 'var(--primary)' },
-  success: { tile: 'bg-success/10 text-success-foreground', color: 'var(--success)' },
-  danger: { tile: 'bg-destructive/10 text-destructive-foreground', color: 'var(--destructive)' },
-  warning: { tile: 'bg-warning/12 text-warning-foreground', color: 'var(--warning)' },
+  default: { tile: 'bg-primary-soft text-primary dark:text-info-foreground', color: 'var(--primary)' },
+  success: { tile: 'bg-success-soft text-success-foreground', color: 'var(--success)' },
+  danger: { tile: 'bg-destructive-soft text-destructive-foreground', color: 'var(--destructive)' },
+  warning: { tile: 'bg-warning-soft text-warning-foreground', color: 'var(--warning)' },
 };
 
 /**
@@ -289,7 +291,7 @@ export function StatCard({
   const unavailable = value === null;
   const style = STAT_TONES[tone];
   return (
-    <Card className="group relative overflow-hidden transition-[box-shadow,border-color,transform] duration-200 hover:-translate-y-px hover:border-border-strong hover:shadow-md" style={{ '--tone': style.color } as CSSProperties}>
+    <Card className="group relative overflow-hidden transition-[box-shadow,border-color,transform] duration-200 hover:-translate-y-px hover:border-border-interactive hover:shadow-md" style={{ '--tone': style.color } as CSSProperties}>
       {/* Decorative depth: a tone-coloured corner glow and a top hairline that brightens on hover. */}
       <span
         aria-hidden

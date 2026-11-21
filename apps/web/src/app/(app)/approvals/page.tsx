@@ -41,7 +41,7 @@ function ApprovalLevels({ level, levels, group }: { level: number; levels: numbe
               {index > 0 ? (
                 <span aria-hidden className="relative mx-1 h-0.5 w-7 overflow-hidden rounded-full bg-border">
                   {step <= level ? (
-                    <span className="absolute inset-0 origin-left animate-grow-x rounded-full bg-success/70" style={{ animationDelay: `${index * 140}ms` }} />
+                    <span className="absolute inset-0 origin-left animate-grow-x rounded-full bg-primary/50" style={{ animationDelay: `${index * 140}ms` }} />
                   ) : null}
                 </span>
               ) : null}
@@ -49,7 +49,7 @@ function ApprovalLevels({ level, levels, group }: { level: number; levels: numbe
                 className={cn(
                   'flex size-6 animate-fade-in items-center justify-center rounded-full border text-[11px] font-semibold',
                   state === 'done' && 'border-success bg-success text-white',
-                  state === 'current' && 'border-warning/60 bg-warning/15 text-warning-foreground ring-4 ring-warning/10',
+                  state === 'current' && 'border-warning-border bg-warning-soft text-warning-foreground ring-4 ring-warning/10',
                   state === 'upcoming' && 'bg-card text-muted-foreground',
                 )}
                 style={{ animationDelay: `${index * 140}ms` }}

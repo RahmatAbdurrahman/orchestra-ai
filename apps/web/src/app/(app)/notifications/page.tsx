@@ -16,12 +16,12 @@ import { cn } from '@/lib/utils';
 /** Icon per notification type (from the notification itself); the title states what happened. */
 const TYPE_STYLE: Record<NotificationType, { icon: LucideIcon; className: string }> = {
   INFO: { icon: Info, className: 'bg-muted text-muted-foreground' },
-  APPROVAL_REQUIRED: { icon: Hourglass, className: 'bg-warning/12 text-warning-foreground' },
-  REQUEST_APPROVED: { icon: CheckCircle2, className: 'bg-success/10 text-success-foreground' },
-  REQUEST_REJECTED: { icon: XCircle, className: 'bg-destructive/10 text-destructive-foreground' },
-  DOCUMENT_PROCESSED: { icon: FileScan, className: 'bg-info/10 text-info-foreground' },
-  AUTOMATION_COMPLETED: { icon: Bot, className: 'bg-success/10 text-success-foreground' },
-  AUTOMATION_FAILED: { icon: Bot, className: 'bg-destructive/10 text-destructive-foreground' },
+  APPROVAL_REQUIRED: { icon: Hourglass, className: 'bg-warning-soft text-warning-foreground' },
+  REQUEST_APPROVED: { icon: CheckCircle2, className: 'bg-success-soft text-success-foreground' },
+  REQUEST_REJECTED: { icon: XCircle, className: 'bg-destructive-soft text-destructive-foreground' },
+  DOCUMENT_PROCESSED: { icon: FileScan, className: 'bg-info-soft text-info-foreground' },
+  AUTOMATION_COMPLETED: { icon: Bot, className: 'bg-success-soft text-success-foreground' },
+  AUTOMATION_FAILED: { icon: Bot, className: 'bg-destructive-soft text-destructive-foreground' },
 };
 
 function NotificationIcon({ type, unread }: { type: NotificationType; unread: boolean }) {
@@ -66,7 +66,7 @@ export default function NotificationsPage() {
             <button
               key={notification.id}
               className={cn(
-                'flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors duration-150 hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none',
+                'flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors duration-150 hover:bg-row-hover focus-visible:bg-row-hover focus-visible:outline-none',
                 !notification.isRead && 'bg-primary/[0.04]',
               )}
               onClick={async () => {

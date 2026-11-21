@@ -84,7 +84,7 @@ export default function AuditPage() {
             <TBody>
               {audit.data.data.map((event) => (
                 <Fragment key={event.id}>
-                  <TR className={cn('cursor-pointer', expanded === event.id && 'bg-muted/40')} onClick={() => setExpanded(expanded === event.id ? null : event.id)}>
+                  <TR className={cn('cursor-pointer', expanded === event.id && 'bg-surface-secondary')} onClick={() => setExpanded(expanded === event.id ? null : event.id)}>
                     <TD className="w-8 pr-0">
                       <button
                         type="button"
@@ -126,7 +126,7 @@ export default function AuditPage() {
                     </TD>
                   </TR>
                   {expanded === event.id ? (
-                    <TR className="bg-muted/30 hover:bg-muted/30">
+                    <TR className="bg-surface-tint hover:bg-surface-tint">
                       <TD colSpan={5} className="pt-0">
                         <ExpandOnMount>
                         <div className="space-y-2 py-1 pl-8">

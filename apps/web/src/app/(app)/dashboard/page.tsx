@@ -237,8 +237,18 @@ export default function DashboardPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
                     <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} tickLine={false} axisLine={false} minTickGap={16} />
                     <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} tickLine={false} axisLine={false} />
-                    <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'var(--muted)', opacity: 0.6 }} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" iconSize={8} />
+                    <Tooltip
+                      contentStyle={TOOLTIP_STYLE}
+                      labelStyle={{ color: 'var(--popover-foreground)', fontWeight: 600, marginBottom: 2 }}
+                      itemStyle={{ color: 'var(--muted-foreground)', padding: 0 }}
+                      cursor={{ fill: 'var(--chart-cursor)', opacity: 0.7 }}
+                    />
+                    <Legend
+                      wrapperStyle={{ fontSize: 12 }}
+                      iconType="circle"
+                      iconSize={8}
+                      formatter={(value) => <span style={{ color: 'var(--muted-foreground)' }}>{value}</span>}
+                    />
                     <Bar
                       dataKey="completed"
                       name="Completed"

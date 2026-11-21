@@ -346,9 +346,9 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                         aria-hidden
                         className={cn(
                           'relative mt-2 flex size-8 shrink-0 items-center justify-center rounded-full border',
-                          approval.decision === 'APPROVED' && 'border-success/40 bg-success/10 text-success-foreground',
-                          approval.decision === 'REJECTED' && 'border-destructive/40 bg-destructive/10 text-destructive-foreground',
-                          approval.decision === 'PENDING' && (approval.activatedAt ? 'border-warning/50 bg-warning/10 text-warning-foreground' : 'bg-card text-subtle-foreground'),
+                          approval.decision === 'APPROVED' && 'border-success-border bg-success-soft text-success-foreground',
+                          approval.decision === 'REJECTED' && 'border-destructive-border bg-destructive-soft text-destructive-foreground',
+                          approval.decision === 'PENDING' && (approval.activatedAt ? 'border-warning-border bg-warning-soft text-warning-foreground' : 'bg-card text-subtle-foreground'),
                           approval.decision === 'SKIPPED' && 'bg-muted text-muted-foreground',
                         )}
                       >

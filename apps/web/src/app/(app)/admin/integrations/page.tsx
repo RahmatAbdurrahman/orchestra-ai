@@ -48,7 +48,7 @@ function ConnectionChain({ health }: { health: UiPathHealth }) {
     { label: 'Process', detail: health.processName, icon: Bot, state: states[3]! },
   ];
   return (
-    <div key={health.checkedAt} className="relative rounded-xl border bg-muted/30 p-3">
+    <div key={health.checkedAt} className="relative rounded-xl border bg-surface-tint p-3">
       <div aria-hidden className="decor-dots decor-fade-radial pointer-events-none absolute inset-0 rounded-xl opacity-60" />
       <ol className="relative flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-0" aria-label="UiPath connection steps">
       {nodes.map((node, index) => (
@@ -67,7 +67,7 @@ function ConnectionChain({ health }: { health: UiPathHealth }) {
           <li
             className={cn(
               'relative flex min-w-0 animate-fade-up items-center gap-2.5 rounded-lg border bg-card px-2.5 py-2 sm:flex-1 sm:flex-col sm:items-start sm:gap-1.5',
-              node.state === 'failed' && 'border-destructive/40',
+              node.state === 'failed' && 'border-destructive-border',
             )}
             style={{ animationDelay: `${index * 120}ms` }}
           >
@@ -75,8 +75,8 @@ function ConnectionChain({ health }: { health: UiPathHealth }) {
               className={cn(
                 'flex size-7 shrink-0 items-center justify-center rounded-md',
                 node.state === 'origin' && 'bg-primary/10 text-primary dark:text-info-foreground',
-                node.state === 'ok' && 'bg-success/10 text-success-foreground',
-                node.state === 'failed' && 'bg-destructive/10 text-destructive-foreground',
+                node.state === 'ok' && 'bg-success-soft text-success-foreground',
+                node.state === 'failed' && 'bg-destructive-soft text-destructive-foreground',
                 node.state === 'skipped' && 'bg-muted text-subtle-foreground',
               )}
             >
@@ -136,7 +136,7 @@ function DependencyRow({ ok, label, detail, last }: { ok: boolean; label: string
       <span aria-hidden className="absolute top-1/2 left-3 h-px w-3 bg-border" />
       <span aria-hidden className={cn('absolute top-1/2 left-[22px] size-1.5 -translate-y-1/2 rounded-full', ok ? 'bg-success' : 'bg-destructive')} />
       <div className="my-1 flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5 transition-colors duration-300">
-        <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-full', ok ? 'bg-success/10 text-success-foreground' : 'bg-destructive/10 text-destructive-foreground')}>
+        <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-full', ok ? 'bg-success-soft text-success-foreground' : 'bg-destructive-soft text-destructive-foreground')}>
           {ok ? <CheckCircle2 className="size-4" aria-hidden /> : <XCircle className="size-4" aria-hidden />}
         </span>
         <span className="min-w-0 flex-1">
@@ -171,7 +171,7 @@ export default function IntegrationsPage() {
         title="Integrations"
         description="UiPath Orchestrator connectivity and platform health. Credentials stay on the server and are never shown."
       />
-      <div className="stagger grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div className="stagger grid gap-4 2xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <Card className="min-w-0">
           <CardHeader className="flex-row flex-wrap items-start justify-between gap-3">
             <div className="flex min-w-0 items-start gap-3">

@@ -157,13 +157,13 @@ function atmosphereFor(pathname: string): { variant: AtmosphereVariant; motif: A
   return { variant: 'subtle', motif: 'none' };
 }
 
-/** Dark navigation surface: a cool light source at the top and a fading dot lattice at the bottom. */
+/** Navigation surface (white in light, deep navy in dark): a cool light source at the top and a fading dot lattice at the bottom. */
 function SidebarDecor() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-      <div className="absolute -top-28 -left-20 size-80 rounded-full bg-[radial-gradient(closest-side,rgb(59_130_246/0.18),transparent)]" />
-      <div className="absolute -right-24 top-1/3 size-56 rounded-full bg-[radial-gradient(closest-side,rgb(56_189_248/0.06),transparent)]" />
-      <div className="absolute inset-x-0 bottom-0 h-64 bg-[radial-gradient(circle_at_1px_1px,rgb(148_163_184/0.12)_1px,transparent_0)] bg-[length:18px_18px] [mask-image:linear-gradient(to_top,#000_10%,transparent)]" />
+      <div className="absolute -top-28 -left-20 size-80 rounded-full bg-[radial-gradient(closest-side,var(--sidebar-glow),transparent)]" />
+      <div className="absolute -right-24 top-1/3 size-56 rounded-full bg-[radial-gradient(closest-side,var(--sidebar-glow-2),transparent)]" />
+      <div className="absolute inset-x-0 bottom-0 h-64 bg-[radial-gradient(circle_at_1px_1px,var(--sidebar-dots)_1px,transparent_0)] bg-[length:18px_18px] [mask-image:linear-gradient(to_top,#000_10%,transparent)]" />
     </div>
   );
 }
@@ -286,7 +286,7 @@ function SidebarNav({ collapsed, pathname }: { collapsed: boolean; pathname: str
                     className={cn(
                       'group relative flex h-9 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors duration-150 outline-none focus-visible:shadow-[0_0_0_2px_var(--sidebar-indicator)]',
                       active
-                        ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                        ? 'bg-sidebar-accent text-sidebar-active-foreground'
                         : 'text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground',
                     )}
                   >
@@ -375,7 +375,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* Desktop sidebar */}
         <aside
           className={cn(
-            'sticky top-0 isolate hidden h-dvh shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-[220ms] ease-[var(--ease-out)] lg:flex',
+            'sticky top-0 isolate hidden h-dvh shrink-0 flex-col border-r border-sidebar-border bg-sidebar shadow-[6px_0_24px_-18px_rgb(30_58_138/0.18)] transition-[width] duration-[220ms] ease-[var(--ease-out)] lg:flex dark:shadow-none',
             sidebar.collapsed ? 'w-[72px]' : 'w-64',
           )}
           aria-label="Main navigation"
@@ -389,7 +389,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* Mobile drawer: always mounted so it can slide; inert while closed */}
         <div className={cn('fixed inset-0 z-40 lg:hidden', !mobileOpen && 'pointer-events-none')} inert={!mobileOpen}>
           <div
-            className={cn('absolute inset-0 bg-slate-950/60 transition-opacity duration-200', mobileOpen ? 'opacity-100' : 'opacity-0')}
+            className={cn('absolute inset-0 bg-overlay transition-opacity duration-200', mobileOpen ? 'opacity-100' : 'opacity-0')}
             onClick={() => setMobileOpen(false)}
             aria-hidden
           />
@@ -416,7 +416,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <div className="relative isolate flex min-w-0 flex-1 flex-col">
           <Atmosphere key={pathname} {...atmosphere} />
-          <header className="sticky top-0 z-30 flex h-16 items-center gap-1.5 border-b bg-background/80 px-3 backdrop-blur-sm sm:gap-2 sm:px-6">
+          <header className="sticky top-0 z-30 flex h-16 items-center gap-1.5 border-b bg-header px-3 backdrop-blur-sm sm:gap-2 sm:px-6">
             <IconButton label="Open menu" className="lg:hidden" onClick={() => setMobileOpen(true)}>
               <Menu />
             </IconButton>

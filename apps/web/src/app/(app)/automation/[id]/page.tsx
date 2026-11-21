@@ -59,7 +59,7 @@ function ExecutionTimeline({
                     reached && index < 2 && 'border-primary/30 bg-primary/10 text-primary dark:text-info-foreground',
                     reached &&
                       index === 2 &&
-                      (failed ? 'border-destructive/30 bg-destructive/10 text-destructive-foreground' : 'border-success/30 bg-success/10 text-success-foreground'),
+                      (failed ? 'border-destructive-border bg-destructive-soft text-destructive-foreground' : 'border-success-border bg-success-soft text-success-foreground'),
                   )}
                   style={{ animationDelay: `${index * 150}ms` }}
                 >
@@ -235,7 +235,7 @@ export default function AutomationJobPage({ params }: { params: Promise<{ id: st
         <CardContent>
           {logs.isLoading ? <LoadingBlock rows={4} /> : null}
           {logs.data && logs.data.length === 0 ? <p className="text-sm text-muted-foreground">No log entries yet.</p> : null}
-          <ol className="scrollbar-thin max-h-[28rem] space-y-1.5 overflow-auto rounded-lg border bg-muted/40 p-3 font-mono text-xs">
+          <ol className="scrollbar-thin max-h-[28rem] space-y-1.5 overflow-auto rounded-lg border bg-surface-secondary p-3 font-mono text-xs">
             {logs.data?.map((log) => (
               <li
                 key={log.id}

@@ -202,7 +202,7 @@ function WorkflowEditor({ workflow }: { workflow: WorkflowView }) {
             <div className="relative space-y-3">
             {thresholds.length > 1 ? <span aria-hidden className="absolute top-6 bottom-6 left-[24px] w-px bg-gradient-to-b from-primary/40 to-primary/10" /> : null}
             {thresholds.map((threshold, index) => (
-              <div key={index} className="relative flex flex-wrap items-center gap-3 rounded-lg border bg-muted/30 p-3 text-sm">
+              <div key={index} className="relative flex flex-wrap items-center gap-3 rounded-lg border bg-surface-tint p-3 text-sm">
                 <span className="relative flex size-6 shrink-0 items-center justify-center rounded-full bg-card text-xs font-semibold text-primary ring-1 ring-primary/30 dark:text-info-foreground">{index + 1}</span>
                 <span className="w-20 text-muted-foreground">{index === thresholds.length - 1 ? 'Above' : 'Up to'}</span>
                 {threshold.maxAmount !== null ? (

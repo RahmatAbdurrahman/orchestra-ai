@@ -13,7 +13,7 @@ export function Card({ className, interactive, ...props }: React.ComponentProps<
       className={cn(
         // The inset hairline gives surfaces a lit top edge in dark mode (invisible on white).
         'rounded-xl border bg-card text-card-foreground shadow-xs inset-shadow-[0_1px_0_0_var(--surface-highlight)]',
-        interactive && 'transition-[box-shadow,border-color,transform] duration-200 hover:-translate-y-px hover:border-border-strong hover:shadow-md',
+        interactive && 'transition-[box-shadow,border-color,transform] duration-200 hover:-translate-y-px hover:border-border-interactive hover:shadow-md',
         className,
       )}
       {...props}
@@ -38,8 +38,10 @@ export function CardContent({ className, ...props }: React.ComponentProps<'div'>
 }
 
 // ---------------------------------------------------------------- Form controls
+// Disabled fields stay readable (read-only workflow values must be legible): flat secondary surface in
+// light mode, the original dimmed look in dark mode.
 const fieldBase =
-  'w-full min-w-0 rounded-md border border-input bg-card text-sm text-foreground shadow-xs outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-subtle-foreground hover:border-border-strong focus-visible:border-ring focus-visible:shadow-[var(--focus-ring)] disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-70 aria-invalid:border-destructive aria-invalid:focus-visible:shadow-[0_0_0_3px_color-mix(in_oklab,var(--destructive)_25%,transparent)]';
+  'w-full min-w-0 rounded-md border border-input bg-card text-sm text-foreground shadow-xs outline-none transition-[border-color,box-shadow,background-color] duration-150 placeholder:text-disabled-foreground hover:border-input-hover focus-visible:border-ring focus-visible:shadow-[var(--focus-ring)] disabled:cursor-not-allowed disabled:border-border disabled:bg-surface-secondary disabled:text-muted-foreground disabled:shadow-none dark:disabled:bg-muted dark:disabled:text-foreground dark:disabled:opacity-70 aria-invalid:border-destructive aria-invalid:focus-visible:shadow-[0_0_0_3px_color-mix(in_oklab,var(--destructive)_25%,transparent)]';
 
 export function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
   return (
@@ -125,11 +127,11 @@ const badgeVariants = cva(
     variants: {
       tone: {
         neutral: 'border-border bg-muted text-secondary-foreground',
-        info: 'border-info/20 bg-info/10 text-info-foreground',
-        primary: 'border-primary/20 bg-primary/10 text-primary dark:text-info-foreground',
-        success: 'border-success/25 bg-success/10 text-success-foreground',
-        warning: 'border-warning/30 bg-warning/12 text-warning-foreground',
-        danger: 'border-destructive/25 bg-destructive/10 text-destructive-foreground',
+        info: 'border-info-border bg-info-soft text-info-foreground',
+        primary: 'border-border-interactive bg-primary-soft text-primary-hover dark:border-primary/20 dark:text-info-foreground',
+        success: 'border-success-border bg-success-soft text-success-foreground',
+        warning: 'border-warning-border bg-warning-soft text-warning-foreground',
+        danger: 'border-destructive-border bg-destructive-soft text-destructive-foreground',
         outline: 'border-border text-muted-foreground',
       },
     },
@@ -149,10 +151,10 @@ const alertVariants = cva(
   {
     variants: {
       tone: {
-        info: 'border-info/25 bg-info/6 [&>svg]:text-info-foreground',
-        warning: 'border-warning/35 bg-warning/8 [&>svg]:text-warning-foreground',
-        danger: 'border-destructive/30 bg-destructive/6 text-destructive-foreground',
-        success: 'border-success/30 bg-success/6 [&>svg]:text-success-foreground',
+        info: 'border-info-border bg-info-soft/50 dark:border-info/25 dark:bg-info/6 [&>svg]:text-info-foreground',
+        warning: 'border-warning-border bg-warning-soft/60 dark:border-warning/35 dark:bg-warning/8 [&>svg]:text-warning-foreground',
+        danger: 'border-destructive-border bg-destructive-soft/60 dark:border-destructive/30 dark:bg-destructive/6 text-destructive-foreground',
+        success: 'border-success-border bg-success-soft/60 dark:border-success/30 dark:bg-success/6 [&>svg]:text-success-foreground',
       },
     },
     defaultVariants: { tone: 'info' },
@@ -172,13 +174,13 @@ export function Table({ className, ...props }: React.ComponentProps<'table'>) {
   );
 }
 export function THead({ className, ...props }: React.ComponentProps<'thead'>) {
-  return <thead className={cn('bg-muted/50 [&_tr]:border-b [&_tr]:hover:bg-transparent', className)} {...props} />;
+  return <thead className={cn('bg-table-head [&_tr]:border-b [&_tr]:hover:bg-transparent', className)} {...props} />;
 }
 export function TBody({ className, ...props }: React.ComponentProps<'tbody'>) {
   return <tbody className={cn('[&_tr:last-child]:border-0', className)} {...props} />;
 }
 export function TR({ className, ...props }: React.ComponentProps<'tr'>) {
-  return <tr className={cn('border-b transition-colors duration-150 hover:bg-muted/50', className)} {...props} />;
+  return <tr className={cn('border-b transition-colors duration-150 hover:bg-row-hover', className)} {...props} />;
 }
 export function TH({ className, ...props }: React.ComponentProps<'th'>) {
   return (
