@@ -1,16 +1,18 @@
 'use client';
 
-import { ROLE_LABELS } from '@orchestra/domain';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
+import { ChevronRight, KeyRound, Loader2, UserRound } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { Collapse } from '@/components/motion';
 import { KeyValue, PageHeader } from '@/components/page';
+import { RoleBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from '@/components/ui/primitives';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from '@/components/ui/primitives';
 import { api, errorMessage } from '@/lib/api';
 import { ME_QUERY_KEY, useAuth } from '@/lib/auth';
 import { formatDateTime } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -18,6 +20,7 @@ export default function ProfilePage() {
   const [name, setName] = useState(user.name);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [showPermissions, setShowPermissions] = useState(false);
   const update = useMutation({
     mutationFn: (body: Record<string, string>) => api('/auth/me', { method: 'PATCH', body }),
     onSuccess: async () => {
@@ -31,11 +34,14 @@ export default function ProfilePage() {
 
   return (
     <>
-      <PageHeader title="Profile" description="Your account, roles and sign-in security." />
+      <PageHeader icon={UserRound} title="Profile" description="Your account, roles and sign-in security." />
       <div className="stagger grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader className="flex-row items-center gap-4">
-            <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary/12 text-base font-semibold text-primary ring-1 ring-primary/20 dark:text-info-foreground" aria-hidden>
+            <span
+              className="relative flex size-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-base font-semibold text-primary ring-1 ring-primary/25 dark:text-info-foreground"
+              aria-hidden
+            >
               {user.name
                 .split(' ')
                 .map((part) => part[0])
@@ -55,13 +61,24 @@ export default function ProfilePage() {
             </div>
             <div className="flex flex-wrap gap-1.5">
               {user.roles.map((role) => (
-                <Badge key={role} tone="primary">{ROLE_LABELS[role]}</Badge>
+                <RoleBadge key={role} role={role} />
               ))}
             </div>
-            <details className="text-xs text-muted-foreground">
-              <summary className="cursor-pointer">Effective permissions ({user.permissions.length})</summary>
-              <p className="mt-2 font-mono leading-relaxed">{user.permissions.join(', ')}</p>
-            </details>
+            <div className="text-xs text-muted-foreground">
+              <button
+                type="button"
+                className="flex items-center gap-1 rounded-sm font-medium transition-colors hover:text-foreground focus-visible:shadow-[var(--focus-ring)] focus-visible:outline-none"
+                aria-expanded={showPermissions}
+                aria-controls="effective-permissions"
+                onClick={() => setShowPermissions((open) => !open)}
+              >
+                <ChevronRight className={cn('size-3.5 transition-transform duration-200', showPermissions && 'rotate-90')} aria-hidden />
+                Effective permissions ({user.permissions.length})
+              </button>
+              <Collapse open={showPermissions} id="effective-permissions">
+                <p className="mt-2 rounded-md border bg-muted/40 p-2.5 font-mono leading-relaxed">{user.permissions.join(', ')}</p>
+              </Collapse>
+            </div>
             <form
               className="space-y-2"
               onSubmit={(event) => {
@@ -79,7 +96,9 @@ export default function ProfilePage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Change password</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <KeyRound className="size-4 text-muted-foreground" aria-hidden /> Change password
+            </CardTitle>
             <CardDescription>At least 12 characters with letters and digits. Other sessions are signed out.</CardDescription>
           </CardHeader>
           <CardContent>

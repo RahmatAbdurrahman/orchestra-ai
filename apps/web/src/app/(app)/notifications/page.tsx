@@ -3,7 +3,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { BellOff, CheckCheck } from 'lucide-react';
+import type { NotificationType } from '@orchestra/domain';
+import { Bell, BellOff, Bot, CheckCheck, CheckCircle2, FileScan, Hourglass, Info, XCircle, type LucideIcon } from 'lucide-react';
 import { EmptyState, ErrorBlock, LoadingBlock, PageHeader, Pager } from '@/components/page';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/primitives';
@@ -11,6 +12,27 @@ import { api } from '@/lib/api';
 import { formatDateTime, formatRelative } from '@/lib/format';
 import type { NotificationView, Paginated } from '@/lib/types';
 import { cn } from '@/lib/utils';
+
+/** Icon per notification type (from the notification itself); the title states what happened. */
+const TYPE_STYLE: Record<NotificationType, { icon: LucideIcon; className: string }> = {
+  INFO: { icon: Info, className: 'bg-muted text-muted-foreground' },
+  APPROVAL_REQUIRED: { icon: Hourglass, className: 'bg-warning/12 text-warning-foreground' },
+  REQUEST_APPROVED: { icon: CheckCircle2, className: 'bg-success/10 text-success-foreground' },
+  REQUEST_REJECTED: { icon: XCircle, className: 'bg-destructive/10 text-destructive-foreground' },
+  DOCUMENT_PROCESSED: { icon: FileScan, className: 'bg-info/10 text-info-foreground' },
+  AUTOMATION_COMPLETED: { icon: Bot, className: 'bg-success/10 text-success-foreground' },
+  AUTOMATION_FAILED: { icon: Bot, className: 'bg-destructive/10 text-destructive-foreground' },
+};
+
+function NotificationIcon({ type, unread }: { type: NotificationType; unread: boolean }) {
+  const style = TYPE_STYLE[type] ?? TYPE_STYLE.INFO;
+  return (
+    <span aria-hidden className={cn('relative mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg', style.className)}>
+      <style.icon className="size-4" />
+      {unread ? <span className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-primary ring-2 ring-card" /> : null}
+    </span>
+  );
+}
 
 export default function NotificationsPage() {
   const router = useRouter();
@@ -28,6 +50,7 @@ export default function NotificationsPage() {
   return (
     <>
       <PageHeader
+        icon={Bell}
         title="Notifications"
         description={notifications.data ? (notifications.data.unread ? `${notifications.data.unread} unread` : 'All caught up') : undefined}
         actions={<Button variant="outline" onClick={() => markAll.mutate()} disabled={!notifications.data?.unread || markAll.isPending}><CheckCheck /> Mark all read</Button>}
@@ -52,7 +75,7 @@ export default function NotificationsPage() {
                 if (notification.link) router.push(notification.link);
               }}
             >
-              <span className={cn('mt-1.5 size-2 shrink-0 rounded-full', notification.isRead ? 'bg-border-strong' : 'bg-primary')} aria-hidden />
+              <NotificationIcon type={notification.type} unread={!notification.isRead} />
               <span className="min-w-0 flex-1 space-y-0.5">
                 <span className={cn('block text-sm', !notification.isRead && 'font-semibold')}>
                   {notification.title}

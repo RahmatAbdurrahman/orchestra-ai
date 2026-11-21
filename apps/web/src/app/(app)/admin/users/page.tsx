@@ -2,10 +2,11 @@
 
 import { Permission, ROLE_LABELS, ROLE_NAMES, type RoleName } from '@orchestra/domain';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Pencil, Plus, UserX } from 'lucide-react';
+import { Loader2, Pencil, Plus, Users, UserX } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { EmptyState, ErrorBlock, LoadingBlock, PageHeader, Pager } from '@/components/page';
+import { EmptyState, ErrorBlock, FetchingBar, LoadingBlock, PageHeader, Pager } from '@/components/page';
+import { RoleBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/overlays';
 import { Badge, Card, Input, Label, NativeSelect, SearchInput, Table, TBody, TD, TH, THead, TR } from '@/components/ui/primitives';
@@ -13,6 +14,7 @@ import { api, errorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatRelative } from '@/lib/format';
 import type { Department, Paginated, UserView } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 interface Draft {
   id?: string;
@@ -136,6 +138,7 @@ export default function UsersPage() {
   return (
     <>
       <PageHeader
+        icon={Users}
         title="Users & roles"
         description="Create accounts, assign roles and departments, deactivate access. Users are never deleted (the audit trail references them)."
         actions={<Button onClick={() => setDraft(EMPTY)}><Plus /> New user</Button>}
@@ -157,8 +160,9 @@ export default function UsersPage() {
         <EmptyState icon={UserX} title="No matching users" description={query ? `Nobody matches “${query}”. Try another name or email.` : 'Create the first user account.'} />
       ) : null}
       {users.data && users.data.data.length > 0 ? (
-        <Card className="overflow-hidden">
-          <Table>
+        <Card className="relative overflow-hidden">
+          <FetchingBar active={users.isFetching && users.isPlaceholderData} />
+          <Table className={cn('transition-opacity duration-200', users.isPlaceholderData && 'opacity-60')}>
             <THead>
               <TR>
                 <TH>User</TH>
@@ -191,7 +195,7 @@ export default function UsersPage() {
                   <TD>
                     <div className="flex flex-wrap gap-1">
                       {user.roles.map((role) => (
-                        <Badge key={role} tone="primary">{ROLE_LABELS[role]}</Badge>
+                        <RoleBadge key={role} role={role} />
                       ))}
                     </div>
                   </TD>

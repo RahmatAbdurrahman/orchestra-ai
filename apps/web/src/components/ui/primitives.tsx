@@ -11,7 +11,8 @@ export function Card({ className, interactive, ...props }: React.ComponentProps<
     <div
       data-slot="card"
       className={cn(
-        'rounded-xl border bg-card text-card-foreground shadow-xs',
+        // The inset hairline gives surfaces a lit top edge in dark mode (invisible on white).
+        'rounded-xl border bg-card text-card-foreground shadow-xs inset-shadow-[0_1px_0_0_var(--surface-highlight)]',
         interactive && 'transition-[box-shadow,border-color,transform] duration-200 hover:-translate-y-px hover:border-border-strong hover:shadow-md',
         className,
       )}

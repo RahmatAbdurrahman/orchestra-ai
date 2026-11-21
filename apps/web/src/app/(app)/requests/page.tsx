@@ -6,7 +6,8 @@ import { FileText, Plus, SearchX, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { EmptyState, ErrorBlock, LoadingBlock, PageHeader, Pager, Toolbar } from '@/components/page';
+import { EmptyState, ErrorBlock, FetchingBar, LoadingBlock, PageHeader, Pager, Toolbar } from '@/components/page';
+import { StageMeter } from '@/components/requests/progress-steps';
 import { RequestStatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Card, NativeSelect, SearchInput, Table, TBody, TD, TH, THead, TR } from '@/components/ui/primitives';
@@ -14,6 +15,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatDate, formatMoney, formatRelative } from '@/lib/format';
 import type { Paginated, PurchaseRequestRow } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 export default function RequestsPage() {
   const { can } = useAuth();
@@ -33,6 +35,7 @@ export default function RequestsPage() {
   return (
     <>
       <PageHeader
+        icon={FileText}
         title="Purchase requests"
         description="Track every request from draft to purchase order."
         actions={
@@ -116,8 +119,9 @@ export default function RequestsPage() {
         />
       ) : null}
       {requests.data && requests.data.data.length > 0 ? (
-        <Card className="overflow-hidden">
-          <Table>
+        <Card className="relative overflow-hidden">
+          <FetchingBar active={requests.isFetching && requests.isPlaceholderData} />
+          <Table className={cn('transition-opacity duration-200', requests.isPlaceholderData && 'opacity-60')}>
             <THead>
               <TR>
                 <TH>Request</TH>
@@ -133,14 +137,15 @@ export default function RequestsPage() {
               {requests.data.data.map((row) => (
                 <TR key={row.id} className="group cursor-pointer" onClick={() => router.push(`/requests/${row.id}`)}>
                   <TD>
-                    <Link href={`/requests/${row.id}`} className="font-mono text-[13px] font-semibold hover:text-primary hover:underline" onClick={(event) => event.stopPropagation()}>
+                    <Link href={`/requests/${row.id}`} className="font-mono text-[13px] font-semibold transition-colors group-hover:text-primary hover:underline" onClick={(event) => event.stopPropagation()}>
                       {row.requestNumber}
                     </Link>
                     <div className="max-w-64 truncate text-xs text-muted-foreground">{row.title}</div>
                   </TD>
                   <TD>
                     <RequestStatusBadge status={row.status} />
-                    {row.poNumber ? <div className="mt-1 font-mono text-[11px] text-muted-foreground">{row.poNumber}</div> : null}
+                    <StageMeter status={row.status} className="mt-1.5" />
+                    {row.poNumber ? <div className="mt-1 font-mono text-[11px] text-success-foreground">{row.poNumber}</div> : null}
                   </TD>
                   <TD className="hidden max-w-48 truncate md:table-cell">{row.supplierName ?? '—'}</TD>
                   <TD className="text-right tabular-nums">{row.totalAmount ? formatMoney(row.totalAmount, row.currency) : '—'}</TD>

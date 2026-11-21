@@ -11,6 +11,35 @@ const KNOWN_TYPES: Record<string, string> = {
   'image/jpeg': 'JPEG image',
 };
 
+/** Restrained document illustration: two stacked pages and an upload badge; the top page lifts while dragging. */
+function DocumentIllustration({ lifted }: { lifted: boolean }) {
+  return (
+    <span aria-hidden className="relative mb-1 block h-16 w-20">
+      <span className="absolute top-2 left-3 h-[52px] w-11 -rotate-6 rounded-md border bg-muted/80 transition-transform duration-300 group-hover:-rotate-9" />
+      <span
+        className={cn(
+          'absolute top-1 left-6 flex h-[52px] w-11 flex-col gap-1 rounded-md border bg-card p-2 shadow-sm transition-[transform,border-color] duration-300 ease-[var(--ease-out)]',
+          lifted ? '-translate-y-1.5 rotate-3 border-primary/50' : 'group-hover:-translate-y-0.5 group-hover:rotate-2',
+        )}
+      >
+        <span className="h-1 w-5 rounded-full bg-primary/50" />
+        <span className="h-1 w-full rounded-full bg-border-strong/70" />
+        <span className="h-1 w-4/5 rounded-full bg-border-strong/70" />
+        <span className="h-1 w-full rounded-full bg-border-strong/70" />
+        <span className="mt-auto h-1 w-3 self-end rounded-full bg-success/60" />
+      </span>
+      <span
+        className={cn(
+          'absolute right-1 bottom-0 flex size-6 items-center justify-center rounded-full border bg-card text-primary shadow-sm transition-transform duration-300 dark:text-info-foreground',
+          lifted ? 'scale-110' : 'group-hover:scale-105',
+        )}
+      >
+        <FileUp className="size-3.5" />
+      </span>
+    </span>
+  );
+}
+
 /**
  * Click-or-drop file picker for a single file. It only selects the file: the caller uploads it,
  * and the server stays the authority on type and size.
@@ -63,14 +92,7 @@ export function FileDropzone({
           disabled && 'pointer-events-none opacity-60',
         )}
       >
-        <span
-          className={cn(
-            'flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground transition-[transform,color,background-color] duration-200',
-            dragging ? '-translate-y-0.5 bg-primary/12 text-primary' : 'group-hover:text-primary',
-          )}
-        >
-          <FileUp className="size-5" aria-hidden />
-        </span>
+        <DocumentIllustration lifted={dragging} />
         <span className="text-sm">
           <span className="font-medium text-primary">{dragging ? 'Drop the file here' : 'Choose a file'}</span>
           {dragging ? null : <span className="text-muted-foreground"> or drag it here</span>}

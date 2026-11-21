@@ -2,11 +2,12 @@
 
 import { APPROVAL_GROUP_LABELS, Permission } from '@orchestra/domain';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Bot, ExternalLink, FileText, Loader2, PackageCheck, RefreshCw, Rocket } from 'lucide-react';
+import { ArrowLeft, Bot, Check, Clock3, ExternalLink, FileText, Loader2, Minus, PackageCheck, RefreshCw, Rocket, X } from 'lucide-react';
 import Link from 'next/link';
 import { use, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { ErrorBlock, KeyValue, LoadingBlock, PageHeader } from '@/components/page';
+import { EventIcon } from '@/components/event-icon';
+import { EmptyState, ErrorBlock, KeyValue, LoadingBlock, PageHeader } from '@/components/page';
 import { DecisionButtons, ReasonDialog, RetryButton } from '@/components/requests/action-dialogs';
 import { ProgressSteps } from '@/components/requests/progress-steps';
 import { RuleFindings } from '@/components/requests/rule-findings';
@@ -20,6 +21,7 @@ import { useAuth } from '@/lib/auth';
 import { describeEvent } from '@/lib/events';
 import { formatBytes, formatDate, formatDateTime, formatMoney } from '@/lib/format';
 import type { AuditEvent, DocumentView, PurchaseRequestDetail } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 const ACTIVE_STATUSES = new Set(['SUBMITTED', 'PROCESSING_DOCUMENT', 'APPROVED', 'QUEUED', 'RUNNING']);
 
@@ -172,6 +174,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
         <ArrowLeft className="size-4" /> Purchase requests
       </Link>
       <PageHeader
+        icon={FileText}
         eyebrow={
           <span className="flex items-center gap-2">
             <span className="font-mono" data-testid="request-number">{pr.requestNumber}</span>
@@ -336,8 +339,22 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                 <p className="text-sm text-muted-foreground">The approval route is decided by the business rules after verification.</p>
               ) : (
                 <ol className="space-y-3">
-                  {pr.approvals.map((approval) => (
-                    <li key={approval.id} className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between">
+                  {pr.approvals.map((approval, index) => (
+                    <li key={approval.id} className="relative flex animate-fade-up gap-3" style={{ animationDelay: `${index * 90}ms` }}>
+                      {index < pr.approvals.length - 1 ? <span aria-hidden className="absolute top-9 -bottom-3 left-[15px] w-px bg-border" /> : null}
+                      <span
+                        aria-hidden
+                        className={cn(
+                          'relative mt-2 flex size-8 shrink-0 items-center justify-center rounded-full border',
+                          approval.decision === 'APPROVED' && 'border-success/40 bg-success/10 text-success-foreground',
+                          approval.decision === 'REJECTED' && 'border-destructive/40 bg-destructive/10 text-destructive-foreground',
+                          approval.decision === 'PENDING' && (approval.activatedAt ? 'border-warning/50 bg-warning/10 text-warning-foreground' : 'bg-card text-subtle-foreground'),
+                          approval.decision === 'SKIPPED' && 'bg-muted text-muted-foreground',
+                        )}
+                      >
+                        {approval.decision === 'APPROVED' ? <Check className="size-4" /> : approval.decision === 'REJECTED' ? <X className="size-4" /> : approval.decision === 'SKIPPED' ? <Minus className="size-4" /> : approval.activatedAt ? <Clock3 className="size-4" /> : <span className="text-xs font-semibold">{approval.approvalLevel}</span>}
+                      </span>
+                      <div className="flex min-w-0 flex-1 flex-col gap-2 rounded-lg border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p className="text-sm font-medium">
                           Level {approval.approvalLevel} · {APPROVAL_GROUP_LABELS[approval.approverGroup]}
@@ -349,6 +366,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                         {approval.comments ? <p className="mt-1 text-sm">“{approval.comments}”</p> : null}
                       </div>
                       <DecisionBadge decision={approval.decision} />
+                      </div>
                     </li>
                   ))}
                 </ol>
@@ -400,15 +418,19 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
           <Card>
             <CardContent className="pt-5">
               {timeline.isLoading ? <LoadingBlock rows={4} /> : null}
-              <ol className="relative space-y-4 border-l pl-5">
-                {timeline.data?.map((event) => (
-                  <li key={event.id} className="relative">
-                    <span className="absolute top-1.5 -left-[25px] size-2.5 rounded-full border-2 border-background bg-primary" />
+              {timeline.data && timeline.data.length === 0 ? <EmptyState compact icon={FileText} title="No events yet" description="Every step of this request is recorded here." /> : null}
+              <ol className="stagger">
+                {timeline.data?.map((event, index) => (
+                  <li key={event.id} className="relative flex gap-3 pb-4 last:pb-0">
+                    {index < timeline.data!.length - 1 ? <span aria-hidden className="absolute top-8 bottom-0.5 left-[13.5px] w-px bg-gradient-to-b from-border to-transparent" /> : null}
+                    <EventIcon action={event.action} className="relative mt-0.5" />
+                    <div className="min-w-0">
                     <p className="text-sm">{describeEvent(event)}</p>
                     <p className="text-xs text-muted-foreground">
                       {formatDateTime(event.createdAt)} · {event.actor?.name ?? (event.actorType === 'ROBOT' ? 'UiPath robot' : 'System')}
                       {typeof event.metadata?.reason === 'string' ? ` · “${event.metadata.reason}”` : ''}
                     </p>
+                    </div>
                   </li>
                 ))}
               </ol>

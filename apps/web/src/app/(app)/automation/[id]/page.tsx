@@ -2,9 +2,9 @@
 
 import { Permission } from '@orchestra/domain';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Ban } from 'lucide-react';
+import { ArrowLeft, Ban, Bot, CheckCircle2, Circle, Play, Timer, XCircle } from 'lucide-react';
 import Link from 'next/link';
-import { use } from 'react';
+import { Fragment, use } from 'react';
 import { toast } from 'sonner';
 import { ErrorBlock, KeyValue, LoadingBlock, PageHeader } from '@/components/page';
 import { ReasonDialog, RetryButton } from '@/components/requests/action-dialogs';
@@ -16,6 +16,67 @@ import { useAuth } from '@/lib/auth';
 import { formatDateTime, formatDuration } from '@/lib/format';
 import type { AutomationJobDetail, AutomationLogView } from '@/lib/types';
 import { cn } from '@/lib/utils';
+
+/**
+ * Queued -> started -> finished, drawn from the job's own timestamps. A step without a timestamp is
+ * shown as not reached; nothing is estimated.
+ */
+function ExecutionTimeline({
+  queuedAt,
+  startedAt,
+  completedAt,
+  status,
+}: {
+  queuedAt: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  status: string;
+}) {
+  const failed = status === 'FAILED' || status === 'CANCELLED';
+  const steps = [
+    { label: 'Queued', at: queuedAt, icon: Timer },
+    { label: 'Robot started', at: startedAt, icon: Play },
+    { label: failed ? (status === 'FAILED' ? 'Failed' : 'Cancelled') : 'Finished', at: completedAt, icon: failed ? XCircle : CheckCircle2 },
+  ];
+  return (
+    <Card className="mb-4 px-4 py-4 sm:px-5">
+      <ol className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-0" aria-label="Execution timeline">
+        {steps.map((step, index) => {
+          const reached = Boolean(step.at);
+          const Icon = reached ? step.icon : Circle;
+          return (
+            <Fragment key={step.label}>
+              {index > 0 ? (
+                <li role="presentation" className="relative mx-4 hidden h-0.5 min-w-8 flex-1 overflow-hidden rounded-full bg-border sm:block">
+                  {reached ? <span className="absolute inset-0 origin-left animate-grow-x rounded-full bg-primary/60" style={{ animationDelay: `${index * 150}ms` }} /> : null}
+                </li>
+              ) : null}
+              <li className="flex items-center gap-3">
+                <span
+                  className={cn(
+                    'flex size-8 shrink-0 animate-fade-in items-center justify-center rounded-full border',
+                    !reached && 'bg-card text-subtle-foreground',
+                    reached && index < 2 && 'border-primary/30 bg-primary/10 text-primary dark:text-info-foreground',
+                    reached &&
+                      index === 2 &&
+                      (failed ? 'border-destructive/30 bg-destructive/10 text-destructive-foreground' : 'border-success/30 bg-success/10 text-success-foreground'),
+                  )}
+                  style={{ animationDelay: `${index * 150}ms` }}
+                >
+                  <Icon className="size-4" aria-hidden />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium">{step.label}</span>
+                  <span className="block truncate text-xs text-muted-foreground">{reached ? formatDateTime(step.at) : 'Not reached'}</span>
+                </span>
+              </li>
+            </Fragment>
+          );
+        })}
+      </ol>
+    </Card>
+  );
+}
 
 export default function AutomationJobPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -43,6 +104,7 @@ export default function AutomationJobPage({ params }: { params: Promise<{ id: st
         <ArrowLeft className="size-4" /> Automation jobs
       </Link>
       <PageHeader
+        icon={Bot}
         eyebrow={
           <span className="flex items-center gap-2">
             <JobStatusBadge status={data.status} />
@@ -92,6 +154,8 @@ export default function AutomationJobPage({ params }: { params: Promise<{ id: st
           )}
         </Alert>
       ) : null}
+
+      <ExecutionTimeline queuedAt={data.queuedAt} startedAt={data.startedAt} completedAt={data.completedAt} status={data.status} />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
@@ -169,9 +233,17 @@ export default function AutomationJobPage({ params }: { params: Promise<{ id: st
           <CardTitle>Execution log</CardTitle>
         </CardHeader>
         <CardContent>
-          <ol className="space-y-1.5 font-mono text-xs">
+          {logs.isLoading ? <LoadingBlock rows={4} /> : null}
+          {logs.data && logs.data.length === 0 ? <p className="text-sm text-muted-foreground">No log entries yet.</p> : null}
+          <ol className="scrollbar-thin max-h-[28rem] space-y-1.5 overflow-auto rounded-lg border bg-muted/40 p-3 font-mono text-xs">
             {logs.data?.map((log) => (
-              <li key={log.id} className="flex gap-3">
+              <li
+                key={log.id}
+                className={cn(
+                  'flex gap-3 border-l-2 pl-2',
+                  log.level === 'ERROR' ? 'border-destructive/70' : log.level === 'WARN' ? 'border-warning/70' : 'border-success/40',
+                )}
+              >
                 <span className="shrink-0 text-muted-foreground">{formatDateTime(log.createdAt)}</span>
                 <span className={cn('w-12 shrink-0', log.level === 'ERROR' ? 'text-destructive' : log.level === 'WARN' ? 'text-warning-foreground' : 'text-success-foreground')}>{log.level}</span>
                 <span className="min-w-0 break-words">

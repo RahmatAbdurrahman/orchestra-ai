@@ -39,7 +39,8 @@ import {
   Tooltip,
   TooltipProvider,
 } from '@/components/ui/overlays';
-import { Badge } from '@/components/ui/primitives';
+import { Atmosphere, type AtmosphereMotif, type AtmosphereVariant } from '@/components/atmosphere';
+import { RoleBadge } from '@/components/status-badge';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatRelative } from '@/lib/format';
@@ -140,6 +141,31 @@ function pageContext(pathname: string): { title: string; parent?: { href: string
     if (item) return { title: item.label };
   }
   return { title: 'Orchestra AI' };
+}
+
+/**
+ * Decoration intensity per module (presentation only): data-dense pages stay subtle, overview and
+ * workflow pages get the default treatment with a motif that matches the module.
+ */
+function atmosphereFor(pathname: string): { variant: AtmosphereVariant; motif: AtmosphereMotif } {
+  if (pathname === '/dashboard') return { variant: 'default', motif: 'geometric' };
+  if (pathname === '/approvals') return { variant: 'default', motif: 'flow' };
+  if (pathname === '/admin/workflows') return { variant: 'default', motif: 'flow' };
+  if (pathname === '/automation' || pathname === '/admin/integrations') return { variant: 'default', motif: 'network' };
+  if (pathname.startsWith('/automation/')) return { variant: 'subtle', motif: 'network' };
+  if (pathname.startsWith('/requests')) return { variant: 'subtle', motif: 'flow' };
+  return { variant: 'subtle', motif: 'none' };
+}
+
+/** Dark navigation surface: a cool light source at the top and a fading dot lattice at the bottom. */
+function SidebarDecor() {
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+      <div className="absolute -top-28 -left-20 size-80 rounded-full bg-[radial-gradient(closest-side,rgb(59_130_246/0.18),transparent)]" />
+      <div className="absolute -right-24 top-1/3 size-56 rounded-full bg-[radial-gradient(closest-side,rgb(56_189_248/0.06),transparent)]" />
+      <div className="absolute inset-x-0 bottom-0 h-64 bg-[radial-gradient(circle_at_1px_1px,rgb(148_163_184/0.12)_1px,transparent_0)] bg-[length:18px_18px] [mask-image:linear-gradient(to_top,#000_10%,transparent)]" />
+    </div>
+  );
 }
 
 function initials(name: string): string {
@@ -273,7 +299,7 @@ function SidebarNav({ collapsed, pathname }: { collapsed: boolean; pathname: str
                     />
                     <item.icon
                       className={cn(
-                        'size-[18px] shrink-0 transition-colors',
+                        'size-[18px] shrink-0 transition-[color,transform] duration-200 group-hover:scale-110',
                         active ? 'text-sidebar-indicator' : 'text-sidebar-muted group-hover:text-sidebar-accent-foreground',
                       )}
                       aria-hidden
@@ -332,6 +358,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const theme = useTheme();
   const sidebar = useCollapsed();
   const context = pageContext(pathname);
+  const atmosphere = atmosphereFor(pathname);
   useEffect(() => setMobileOpen(false), [pathname]);
   useEffect(() => {
     if (!mobileOpen) return;
@@ -348,11 +375,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* Desktop sidebar */}
         <aside
           className={cn(
-            'sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-[220ms] ease-[var(--ease-out)] lg:flex',
+            'sticky top-0 isolate hidden h-dvh shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-[220ms] ease-[var(--ease-out)] lg:flex',
             sidebar.collapsed ? 'w-[72px]' : 'w-64',
           )}
           aria-label="Main navigation"
         >
+          <SidebarDecor />
           <Brand collapsed={sidebar.collapsed} />
           <SidebarNav collapsed={sidebar.collapsed} pathname={pathname} />
           <SidebarFooter collapsed={sidebar.collapsed} />
@@ -367,11 +395,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           />
           <aside
             className={cn(
-              'absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-sidebar shadow-lg transition-transform duration-[220ms] ease-[var(--ease-out)]',
+              'absolute inset-y-0 left-0 isolate flex w-72 max-w-[85vw] flex-col bg-sidebar shadow-lg transition-transform duration-[220ms] ease-[var(--ease-out)]',
               mobileOpen ? 'translate-x-0' : '-translate-x-full',
             )}
             aria-label="Mobile navigation"
           >
+            <SidebarDecor />
             <button
               className="absolute top-4 right-3 flex size-8 items-center justify-center rounded-md text-sidebar-foreground hover:bg-sidebar-accent focus-visible:shadow-[0_0_0_2px_var(--sidebar-indicator)] focus-visible:outline-none"
               onClick={() => setMobileOpen(false)}
@@ -385,8 +414,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           </aside>
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-30 flex h-16 items-center gap-1.5 border-b bg-background/90 px-3 backdrop-blur-sm sm:gap-2 sm:px-6">
+        <div className="relative isolate flex min-w-0 flex-1 flex-col">
+          <Atmosphere key={pathname} {...atmosphere} />
+          <header className="sticky top-0 z-30 flex h-16 items-center gap-1.5 border-b bg-background/80 px-3 backdrop-blur-sm sm:gap-2 sm:px-6">
             <IconButton label="Open menu" className="lg:hidden" onClick={() => setMobileOpen(true)}>
               <Menu />
             </IconButton>
@@ -451,9 +481,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <div className="truncate text-xs font-normal text-muted-foreground">{user.email}</div>
                   <div className="flex flex-wrap gap-1 pt-1.5">
                     {user.roles.map((role) => (
-                      <Badge key={role} tone="primary">
-                        {ROLE_LABELS[role]}
-                      </Badge>
+                      <RoleBadge key={role} role={role} />
                     ))}
                   </div>
                 </DropdownMenuLabel>

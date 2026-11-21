@@ -4,7 +4,9 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ChevronRight, ScrollText } from 'lucide-react';
 import Link from 'next/link';
 import { Fragment, useState } from 'react';
-import { EmptyState, ErrorBlock, LoadingBlock, PageHeader, Pager } from '@/components/page';
+import { EventIcon } from '@/components/event-icon';
+import { ExpandOnMount } from '@/components/motion';
+import { EmptyState, ErrorBlock, FetchingBar, LoadingBlock, PageHeader, Pager } from '@/components/page';
 import { Badge, Card, NativeSelect, Table, TBody, TD, TH, THead, TR } from '@/components/ui/primitives';
 import { api } from '@/lib/api';
 import { describeEvent } from '@/lib/events';
@@ -36,6 +38,7 @@ export default function AuditPage() {
   return (
     <>
       <PageHeader
+        icon={ScrollText}
         title="Audit trail"
         description="Append-only record of user activity, workflow transitions, approvals and robot executions. Your role determines which events you see."
         actions={
@@ -66,8 +69,9 @@ export default function AuditPage() {
         />
       ) : null}
       {audit.data?.data.length ? (
-        <Card className="overflow-hidden">
-          <Table>
+        <Card className="relative overflow-hidden">
+          <FetchingBar active={audit.isFetching && audit.isPlaceholderData} />
+          <Table className={cn('transition-opacity duration-200', audit.isPlaceholderData && 'opacity-60')}>
             <THead>
               <TR>
                 <TH className="w-8 pr-0"><span className="sr-only">Details</span></TH>
@@ -100,8 +104,13 @@ export default function AuditPage() {
                       <div className="text-[11px] text-subtle-foreground">{formatRelative(event.createdAt)}</div>
                     </TD>
                     <TD>
-                      <div className="text-sm font-medium">{describeEvent(event)}</div>
-                      <code className="mt-0.5 inline-block rounded bg-muted px-1.5 py-px font-mono text-[11px] text-muted-foreground">{event.action}</code>
+                      <div className="flex items-start gap-3">
+                        <EventIcon action={event.action} className="mt-0.5" />
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium">{describeEvent(event)}</div>
+                          <code className="mt-0.5 inline-block rounded bg-muted px-1.5 py-px font-mono text-[11px] text-muted-foreground">{event.action}</code>
+                        </div>
+                      </div>
                     </TD>
                     <TD className="hidden md:table-cell">
                       {event.actor?.name ? <span className="text-[13px]">{event.actor.name}</span> : <Badge tone="neutral">{event.actorType === 'ROBOT' ? 'UiPath robot' : event.actorType === 'SYSTEM' ? 'System' : 'Anonymous'}</Badge>}
@@ -119,7 +128,8 @@ export default function AuditPage() {
                   {expanded === event.id ? (
                     <TR className="bg-muted/30 hover:bg-muted/30">
                       <TD colSpan={5} className="pt-0">
-                        <div className="animate-fade-up space-y-2 py-1 pl-8">
+                        <ExpandOnMount>
+                        <div className="space-y-2 py-1 pl-8">
                           <dl className="flex flex-wrap gap-x-6 gap-y-1 text-xs">
                             <div className="flex gap-1.5"><dt className="text-muted-foreground">Correlation ID</dt><dd className="font-mono">{event.correlationId ?? '—'}</dd></div>
                             <div className="flex gap-1.5"><dt className="text-muted-foreground">IP</dt><dd className="font-mono">{event.ipAddress ?? '—'}</dd></div>
@@ -133,6 +143,7 @@ export default function AuditPage() {
                           )}
                         </pre>
                         </div>
+                        </ExpandOnMount>
                       </TD>
                     </TR>
                   ) : null}

@@ -2,11 +2,13 @@
 
 import { PURCHASE_REQUEST_STATUS_LABELS, Permission, type PurchaseRequestStatus } from '@orchestra/domain';
 import { useQuery } from '@tanstack/react-query';
-import { Activity, AlertTriangle, BarChart3, Bot, CheckCircle2, Clock, FileText, Gauge, Hourglass, Plus, Workflow } from 'lucide-react';
+import { Activity, AlertTriangle, BarChart3, Bot, CheckCircle2, Clock, FileText, Gauge, Hourglass, LayoutDashboard, Plus, Workflow } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { EmptyState, ErrorBlock, LoadingBlock, PageHeader, StatCard } from '@/components/page';
+import { EventIcon } from '@/components/event-icon';
+import { MOTION } from '@/components/motion';
+import { EmptyState, ErrorBlock, LoadingBlock, PageHeader, SectionLabel, StatCard } from '@/components/page';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, NativeSelect, Skeleton } from '@/components/ui/primitives';
 import { api } from '@/lib/api';
@@ -44,12 +46,22 @@ const STATUS_BAR: Partial<Record<PurchaseRequestStatus, string>> = {
   DRAFT: 'bg-border-strong',
 };
 
+const TOOLTIP_STYLE = {
+  background: 'var(--popover)',
+  border: '1px solid var(--border)',
+  borderRadius: 8,
+  fontSize: 12,
+  boxShadow: 'var(--shadow-md)',
+  color: 'var(--popover-foreground)',
+};
+
 function actorLabel(event: AuditEvent): string {
   return event.actor?.name ?? (event.actorType === 'ROBOT' ? 'UiPath robot' : 'System');
 }
 
 export default function DashboardPage() {
-  const { user, can } = useAuth();
+  const { user, can, canAny } = useAuth();
+  const canReadAudit = canAny(Permission.AUDIT_READ_ALL, Permission.AUDIT_READ_OWN, Permission.AUDIT_READ_RELEVANT, Permission.AUDIT_READ_OPERATIONAL);
   const [days, setDays] = useState(30);
   const summary = useQuery({
     queryKey: ['dashboard', 'summary', days],
@@ -86,6 +98,7 @@ export default function DashboardPage() {
   return (
     <>
       <PageHeader
+        icon={LayoutDashboard}
         eyebrow={new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
         title={`Welcome back, ${user.name.split(' ')[0]}`}
         description={`${scopeLabel} · automation overview for the ${periodLabel}`}
@@ -118,60 +131,77 @@ export default function DashboardPage() {
         </div>
       ) : null}
       {totals ? (
-        <section aria-label="Key metrics" className="stagger grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-          <StatCard label="Requests" testId="kpi-requests" value={totals.requests} hint="Created in the selected period" icon={FileText} />
-          <StatCard
-            label="Pending approvals"
-            testId="kpi-pending-approvals"
-            value={totals.pendingApprovals}
-            hint={can(Permission.APPROVALS_DECIDE) ? 'Waiting for you' : 'In approval'}
-            icon={Hourglass}
-            tone="warning"
-          />
-          <StatCard label="Running jobs" testId="kpi-running-jobs" value={totals.runningJobs} hint="Queued or executing in UiPath" icon={Bot} />
-          <StatCard
-            label="Success rate"
-            testId="kpi-success-rate"
-            value={totals.successRate}
-            format={(value) => formatPercent(value)}
-            hint={`${totals.completedJobs} completed · ${totals.failedJobs} failed`}
-            unavailableHint="No finished jobs in this period"
-            icon={Gauge}
-            tone={totals.successRate === null || totals.successRate >= 0.95 ? 'success' : 'danger'}
-          />
-          <StatCard
-            label="Successful executions"
-            testId="kpi-successful-executions"
-            value={totals.completedJobs}
-            hint="Purchase orders created"
-            icon={CheckCircle2}
-            tone="success"
-          />
-          <StatCard
-            label="Failed executions"
-            testId="kpi-failed-executions"
-            value={totals.failedJobs}
-            hint={`${totals.jobsNeedingAttention} currently failed`}
-            icon={AlertTriangle}
-            tone="danger"
-          />
-          <StatCard
-            label="Avg. execution time"
-            testId="kpi-avg.-execution-time"
-            value={totals.avgExecutionSeconds}
-            format={(value) => formatDuration(value)}
-            hint="Robot start to finish"
-            unavailableHint="No completed executions yet"
-            icon={Clock}
-          />
-          <StatCard label="Active workflows" testId="kpi-active-workflows" value={totals.activeWorkflows} hint="Templates accepting requests" icon={Workflow} />
-        </section>
+        <div className="space-y-5">
+          <section aria-labelledby="kpi-pipeline">
+            <SectionLabel>
+              <span id="kpi-pipeline">Request pipeline</span>
+            </SectionLabel>
+            <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+              <StatCard label="Requests" testId="kpi-requests" value={totals.requests} hint="Created in the selected period" icon={FileText} />
+              <StatCard
+                label="Pending approvals"
+                testId="kpi-pending-approvals"
+                value={totals.pendingApprovals}
+                hint={can(Permission.APPROVALS_DECIDE) ? 'Waiting for you' : 'In approval'}
+                icon={Hourglass}
+                tone="warning"
+              />
+              <StatCard label="Running jobs" testId="kpi-running-jobs" value={totals.runningJobs} hint="Queued or executing in UiPath" icon={Bot} />
+              <StatCard label="Active workflows" testId="kpi-active-workflows" value={totals.activeWorkflows} hint="Templates accepting requests" icon={Workflow} />
+            </div>
+          </section>
+          <section aria-labelledby="kpi-automation">
+            <SectionLabel>
+              <span id="kpi-automation">Automation outcomes</span>
+            </SectionLabel>
+            <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+              <StatCard
+                label="Success rate"
+                testId="kpi-success-rate"
+                value={totals.successRate}
+                format={(value) => formatPercent(value)}
+                hint={`${totals.completedJobs} completed · ${totals.failedJobs} failed`}
+                unavailableHint="No finished jobs in this period"
+                icon={Gauge}
+                tone={totals.successRate === null || totals.successRate >= 0.95 ? 'success' : 'danger'}
+              />
+              <StatCard
+                label="Successful executions"
+                testId="kpi-successful-executions"
+                value={totals.completedJobs}
+                hint="Purchase orders created"
+                icon={CheckCircle2}
+                tone="success"
+              />
+              <StatCard
+                label="Failed executions"
+                testId="kpi-failed-executions"
+                value={totals.failedJobs}
+                hint={`${totals.jobsNeedingAttention} currently failed`}
+                icon={AlertTriangle}
+                tone="danger"
+              />
+              <StatCard
+                label="Avg. execution time"
+                testId="kpi-avg.-execution-time"
+                value={totals.avgExecutionSeconds}
+                format={(value) => formatDuration(value)}
+                hint="Robot start to finish"
+                unavailableHint="No completed executions yet"
+                icon={Clock}
+              />
+            </div>
+          </section>
+        </div>
       ) : null}
 
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <Card className="min-w-0 lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Automation outcomes</CardTitle>
+        <Card className="relative min-w-0 overflow-hidden lg:col-span-2">
+          <div aria-hidden className="decor-wash pointer-events-none absolute inset-0" />
+          <CardHeader className="relative">
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="size-4 text-muted-foreground" aria-hidden /> Automation outcomes
+            </CardTitle>
             <CardDescription>
               Jobs per day by final status
               {metrics.data
@@ -179,7 +209,7 @@ export default function DashboardPage() {
                 : ''}
             </CardDescription>
           </CardHeader>
-          <CardContent className="h-72">
+          <CardContent className="relative h-72">
             {metrics.error ? <ErrorBlock error={metrics.error} onRetry={() => void metrics.refetch()} /> : null}
             {metrics.isLoading ? <Skeleton className="h-full w-full rounded-lg" /> : null}
             {metrics.data && !hasOutcomes ? (
@@ -191,27 +221,46 @@ export default function DashboardPage() {
               />
             ) : null}
             {metrics.data && hasOutcomes ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ left: -20, right: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} tickLine={false} axisLine={false} minTickGap={16} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    contentStyle={{
-                      background: 'var(--popover)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 8,
-                      fontSize: 12,
-                      boxShadow: 'var(--shadow-md)',
-                      color: 'var(--popover-foreground)',
-                    }}
-                    cursor={{ fill: 'var(--muted)', opacity: 0.6 }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" iconSize={8} />
-                  <Bar dataKey="completed" name="Completed" stackId="a" fill="var(--chart-2)" maxBarSize={36} animationDuration={500} animationEasing="ease-out" />
-                  <Bar dataKey="failed" name="Failed" stackId="a" fill="var(--chart-3)" radius={[4, 4, 0, 0]} maxBarSize={36} animationDuration={500} animationEasing="ease-out" />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="h-full animate-fade-in">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ left: -20, right: 8 }}>
+                    <defs>
+                      <linearGradient id="bar-completed" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--chart-2)" stopOpacity={0.95} />
+                        <stop offset="100%" stopColor="var(--chart-2)" stopOpacity={0.55} />
+                      </linearGradient>
+                      <linearGradient id="bar-failed" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--chart-3)" stopOpacity={0.95} />
+                        <stop offset="100%" stopColor="var(--chart-3)" stopOpacity={0.6} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} tickLine={false} axisLine={false} minTickGap={16} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'var(--muted)', opacity: 0.6 }} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" iconSize={8} />
+                    <Bar
+                      dataKey="completed"
+                      name="Completed"
+                      stackId="a"
+                      fill="url(#bar-completed)"
+                      maxBarSize={36}
+                      animationDuration={MOTION.chart}
+                      animationEasing="ease-out"
+                    />
+                    <Bar
+                      dataKey="failed"
+                      name="Failed"
+                      stackId="a"
+                      fill="url(#bar-failed)"
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={36}
+                      animationDuration={MOTION.chart}
+                      animationEasing="ease-out"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             ) : null}
           </CardContent>
         </Card>
@@ -223,7 +272,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {!summary.data && !summary.error ? <LoadingBlock rows={4} /> : null}
-            {statuses.map((status) => {
+            {statuses.map((status, index) => {
               const count = summary.data!.requestsByStatus[status] ?? 0;
               return (
                 <div key={status} className="space-y-1.5">
@@ -234,7 +283,7 @@ export default function DashboardPage() {
                   <div className="h-2 overflow-hidden rounded-full bg-muted" role="img" aria-label={`${PURCHASE_REQUEST_STATUS_LABELS[status]}: ${count}`}>
                     <div
                       className={`h-full origin-left animate-grow-x rounded-full ${STATUS_BAR[status] ?? 'bg-primary'}`}
-                      style={{ width: `${(count / statusMax) * 100}%` }}
+                      style={{ width: `${(count / statusMax) * 100}%`, animationDelay: `${index * 60}ms` }}
                     />
                   </div>
                 </div>
@@ -259,9 +308,20 @@ export default function DashboardPage() {
       </div>
 
       <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Recent activity</CardTitle>
-          <CardDescription>Latest audit events you are allowed to see</CardDescription>
+        <CardHeader className="flex-row items-start justify-between gap-3">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="size-4 text-muted-foreground" aria-hidden /> Recent activity
+            </CardTitle>
+            <CardDescription>Latest audit events you are allowed to see</CardDescription>
+          </div>
+          {activity.data?.length && canReadAudit ? (
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/audit">
+                Audit trail <span aria-hidden>→</span>
+              </Link>
+            </Button>
+          ) : null}
         </CardHeader>
         <CardContent>
           {activity.error ? <ErrorBlock error={activity.error} onRetry={() => void activity.refetch()} /> : null}
@@ -273,10 +333,8 @@ export default function DashboardPage() {
             <ol className="stagger">
               {activity.data.map((event, index) => (
                 <li key={event.id} className="relative flex gap-3 pb-4 last:pb-0">
-                  {index < activity.data.length - 1 ? <span className="absolute top-7 bottom-1 left-[11.5px] w-px bg-border" aria-hidden /> : null}
-                  <span className="relative mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border bg-card text-muted-foreground">
-                    {event.actorType === 'ROBOT' ? <Bot className="size-3" aria-hidden /> : <Activity className="size-3" aria-hidden />}
-                  </span>
+                  {index < activity.data.length - 1 ? <span className="absolute top-8 bottom-0.5 left-[13.5px] w-px bg-gradient-to-b from-border to-transparent" aria-hidden /> : null}
+                  <EventIcon action={event.action} className="relative mt-0.5" />
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                     <div className="min-w-0">
                       <p className="text-sm leading-5">{describeEvent(event)}</p>

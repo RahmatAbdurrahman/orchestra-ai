@@ -2,7 +2,7 @@
 
 import { APPROVAL_GROUP_LABELS } from '@orchestra/domain';
 import { useQuery } from '@tanstack/react-query';
-import { CheckCheck, History, TriangleAlert } from 'lucide-react';
+import { Check, CheckCheck, CheckSquare, History, TriangleAlert } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { EmptyState, ErrorBlock, LoadingBlock, PageHeader, Pager } from '@/components/page';
@@ -25,28 +25,46 @@ interface DecidedApproval {
   purchaseRequest: { id: string; requestNumber: string; title: string; status: string; currency: string; totalAmount: number };
 }
 
-/** Where this decision sits in the ordered approval chain (presentation only). */
+/**
+ * Where this decision sits in the ordered approval chain. Levels are decided strictly in order, so
+ * every level before the one waiting here has been approved (presentation of the existing rule).
+ */
 function ApprovalLevels({ level, levels, group }: { level: number; levels: number; group: string }) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <ol className="flex items-center gap-1" aria-label={`Approval level ${level} of ${levels}`}>
+    <div className="flex flex-wrap items-center gap-3">
+      <ol className="flex items-center" aria-label={`Approval level ${level} of ${levels}`}>
         {Array.from({ length: levels }, (_, index) => {
           const step = index + 1;
+          const state = step < level ? 'done' : step === level ? 'current' : 'upcoming';
           return (
-            <li
-              key={step}
-              className={cn(
-                'h-1.5 w-6 origin-left animate-grow-x rounded-full',
-                step < level ? 'bg-success' : step === level ? 'bg-warning' : 'bg-muted ring-1 ring-border ring-inset',
-              )}
-              style={{ animationDelay: `${index * 80}ms` }}
-              title={step < level ? `Level ${step}: approved` : step === level ? `Level ${step}: waiting for you` : `Level ${step}: later`}
-            />
+            <li key={step} className="flex items-center">
+              {index > 0 ? (
+                <span aria-hidden className="relative mx-1 h-0.5 w-7 overflow-hidden rounded-full bg-border">
+                  {step <= level ? (
+                    <span className="absolute inset-0 origin-left animate-grow-x rounded-full bg-success/70" style={{ animationDelay: `${index * 140}ms` }} />
+                  ) : null}
+                </span>
+              ) : null}
+              <span
+                className={cn(
+                  'flex size-6 animate-fade-in items-center justify-center rounded-full border text-[11px] font-semibold',
+                  state === 'done' && 'border-success bg-success text-white',
+                  state === 'current' && 'border-warning/60 bg-warning/15 text-warning-foreground ring-4 ring-warning/10',
+                  state === 'upcoming' && 'bg-card text-muted-foreground',
+                )}
+                style={{ animationDelay: `${index * 140}ms` }}
+              >
+                {state === 'done' ? <Check className="size-3" aria-hidden /> : step}
+                <span className="sr-only">
+                  {state === 'done' ? `Level ${step} approved` : state === 'current' ? `Level ${step} waiting for you` : `Level ${step} later`}
+                </span>
+              </span>
+            </li>
           );
         })}
       </ol>
       <span className="text-xs font-medium text-muted-foreground">
-        Level {level}/{levels} · {group}
+        Level {level} of {levels} · {group}
       </span>
     </div>
   );
@@ -62,7 +80,7 @@ export default function ApprovalsPage() {
 
   return (
     <>
-      <PageHeader title="Approvals" description="Requests waiting for your decision. Levels are decided in order; you cannot approve your own requests." />
+      <PageHeader icon={CheckSquare} title="Approvals" description="Requests waiting for your decision. Levels are decided in order; you cannot approve your own requests." />
       <Tabs defaultValue="pending">
         <TabsList>
           <TabsTrigger value="pending">Waiting for me {pending.data?.length ? <Badge tone="warning" className="tabular-nums">{pending.data.length}</Badge> : null}</TabsTrigger>
@@ -72,11 +90,12 @@ export default function ApprovalsPage() {
           {pending.error ? <ErrorBlock error={pending.error} onRetry={() => void pending.refetch()} /> : null}
           {pending.isLoading ? <LoadingBlock rows={4} label="Loading approvals" /> : null}
           {pending.data?.length === 0 ? (
-            <EmptyState icon={CheckCheck} title="You're all caught up" description="Nothing is waiting for your decision. New approval requests will appear here and in your notifications." />
+            <EmptyState icon={CheckCheck} tone="success" title="You're all caught up" description="Nothing is waiting for your decision. New approval requests will appear here and in your notifications." />
           ) : null}
           <div className="stagger grid gap-3">
             {pending.data?.map((approval) => (
-              <Card key={approval.id} data-testid="pending-approval" interactive className="overflow-hidden">
+              <Card key={approval.id} data-testid="pending-approval" interactive className="relative overflow-hidden">
+                <span aria-hidden className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-warning/80 via-warning/40 to-transparent" />
                 <CardContent className="flex flex-col gap-4 pt-5 lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0 space-y-2">
                     <ApprovalLevels level={approval.approvalLevel} levels={approval.purchaseRequest.levels} group={APPROVAL_GROUP_LABELS[approval.approverGroup]} />

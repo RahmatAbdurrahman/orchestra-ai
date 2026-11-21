@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Permission } from '@orchestra/domain';
-import { AlertTriangle, CheckCircle2, Circle, Loader2, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Circle, FilePlus2, Loader2, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -26,6 +26,15 @@ type FormValues = z.infer<typeof schema>;
 
 const ACCEPTED = '.pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg';
 const SUBMIT_STEPS = ['Creating request…', 'Uploading document…', 'Submitting for document intelligence…'];
+
+/** Numbered marker for the two form sections (decorative; the headings carry the meaning). */
+function StepNumber({ value }: { value: number }) {
+  return (
+    <span aria-hidden className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary ring-1 ring-primary/20 dark:text-info-foreground">
+      {value}
+    </span>
+  );
+}
 
 export default function NewRequestPage() {
   const { can, user } = useAuth();
@@ -65,14 +74,17 @@ export default function NewRequestPage() {
   return (
     <>
       <PageHeader
+        icon={FilePlus2}
         title="New purchase request"
         description={`Department: ${user.department?.name ?? '—'}. Upload the supplier document; Orchestra extracts the data for you to verify.`}
       />
       <form onSubmit={onSubmit} className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <Card>
           <CardHeader>
-            <CardTitle>Request details</CardTitle>
-            <CardDescription>What do you need, and why?</CardDescription>
+            <CardTitle className="flex items-center gap-2.5">
+              <StepNumber value={1} /> Request details
+            </CardTitle>
+            <CardDescription className="pl-[30px]">What do you need, and why?</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {error ? <Alert tone="danger"><AlertTriangle className="size-4" /><div>{error}</div></Alert> : null}
@@ -90,8 +102,10 @@ export default function NewRequestPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Supporting document</CardTitle>
-            <CardDescription>Invoice or quotation · PDF, PNG or JPEG · max 10 MB</CardDescription>
+            <CardTitle className="flex items-center gap-2.5">
+              <StepNumber value={2} /> Supporting document
+            </CardTitle>
+            <CardDescription className="pl-[30px]">Invoice or quotation · PDF, PNG or JPEG · max 10 MB</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <FileDropzone file={file} onChange={setFile} accept={ACCEPTED} disabled={!!step} hint="PDF, PNG or JPEG" testId="document-input" />

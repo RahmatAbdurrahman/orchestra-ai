@@ -68,6 +68,17 @@
   --shadow-md: 0 4px 12px -2px rgb(15 23 42 / 0.08), 0 2px 4px -2px rgb(15 23 42 / 0.05);
   --shadow-lg: 0 16px 32px -8px rgb(15 23 42 / 0.16), 0 4px 8px -4px rgb(15 23 42 / 0.06);
   --focus-ring: 0 0 0 3px color-mix(in oklab, var(--ring) 35%, transparent);
+
+  /* Atmosphere (decorative layers only; never carries meaning) */
+  --atmo-glow-a: rgb(37 99 235 / 0.09);
+  --atmo-glow-b: rgb(14 165 233 / 0.07);
+  --atmo-glow-c: rgb(99 102 241 / 0.05);
+  --atmo-dot: rgb(15 23 42 / 0.075);
+  --atmo-grid: rgb(15 23 42 / 0.045);
+  --atmo-line: rgb(37 99 235 / 0.22);
+  --atmo-node: rgb(37 99 235 / 0.42);
+  --atmo-node-soft: rgb(37 99 235 / 0.1);
+  --surface-highlight: rgb(255 255 255 / 0.7);
 }
 
 .dark {
@@ -117,6 +128,16 @@
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.35), 0 1px 3px 0 rgb(0 0 0 / 0.25);
   --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.45), 0 2px 4px -2px rgb(0 0 0 / 0.3);
   --shadow-lg: 0 16px 32px -8px rgb(0 0 0 / 0.6), 0 4px 8px -4px rgb(0 0 0 / 0.35);
+
+  --atmo-glow-a: rgb(59 130 246 / 0.15);
+  --atmo-glow-b: rgb(56 189 248 / 0.08);
+  --atmo-glow-c: rgb(129 140 248 / 0.08);
+  --atmo-dot: rgb(148 163 184 / 0.11);
+  --atmo-grid: rgb(148 163 184 / 0.06);
+  --atmo-line: rgb(96 165 250 / 0.24);
+  --atmo-node: rgb(96 165 250 / 0.5);
+  --atmo-node-soft: rgb(96 165 250 / 0.12);
+  --surface-highlight: rgb(255 255 255 / 0.045);
 }
 
 @theme inline {
@@ -194,6 +215,38 @@
   --animate-grow-x: grow-x 600ms var(--ease-out) both;
   --animate-grow-y: grow-y 500ms var(--ease-out) both;
   --animate-message-in: message-in 180ms var(--ease-out) both;
+  --animate-fade-in: fade-in 500ms var(--ease-out) both;
+  --animate-draw: draw 1100ms var(--ease-out) both;
+  --animate-float: float 9s var(--ease-in-out) infinite;
+  --animate-travel: travel 7s linear infinite;
+  --animate-indeterminate: indeterminate 1.1s var(--ease-in-out) infinite;
+  --animate-status-in: status-in 320ms var(--ease-out) both;
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  /* For SVG strokes drawn with pathLength="1" and stroke-dasharray: 1. */
+  @keyframes draw {
+    from { stroke-dashoffset: 1; }
+    to { stroke-dashoffset: 0; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  @keyframes travel {
+    from { stroke-dashoffset: 1; }
+    to { stroke-dashoffset: 0; }
+  }
+  @keyframes indeterminate {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(300%); }
+  }
+  @keyframes status-in {
+    from { opacity: 0.35; transform: scale(0.96); }
+    to { opacity: 1; transform: none; }
+  }
 
   @keyframes fade-up {
     from { opacity: 0; transform: translateY(6px); }
@@ -278,7 +331,73 @@
   }
 }
 
+/*
+ * Decorative system. Every decor-* layer is aria-hidden, pointer-events: none and low contrast;
+ * it adds depth but never carries information.
+ */
+@utility decor-glow {
+  background-image:
+    radial-gradient(ellipse 55% 75% at 8% -12%, var(--atmo-glow-a), transparent 70%),
+    radial-gradient(ellipse 42% 62% at 92% -22%, var(--atmo-glow-b), transparent 72%),
+    radial-gradient(ellipse 30% 45% at 55% -28%, var(--atmo-glow-c), transparent 70%);
+}
+@utility decor-dots {
+  background-image: radial-gradient(circle at 1px 1px, var(--atmo-dot) 1px, transparent 0);
+  background-size: 22px 22px;
+}
+@utility decor-grid {
+  background-image:
+    linear-gradient(var(--atmo-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--atmo-grid) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+@utility decor-fade-b {
+  mask-image: linear-gradient(to bottom, #000 20%, transparent 100%);
+}
+@utility decor-fade-radial {
+  mask-image: radial-gradient(ellipse 80% 100% at 50% 0%, #000 22%, transparent 78%);
+}
+@utility decor-wash {
+  background-image: linear-gradient(to top, color-mix(in oklab, var(--primary) 5%, transparent), transparent 65%);
+}
+/* SVG strokes with pathLength="1": draw once on mount. */
+@utility decor-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: var(--animate-draw);
+}
+/* SVG strokes with pathLength="1": a short highlight travelling along the path (login only). */
+@utility decor-travel {
+  stroke-dasharray: 0.07 0.93;
+  animation: var(--animate-travel);
+}
+@utility hover-lift {
+  transition-property: transform, box-shadow, border-color;
+  transition-duration: 200ms;
+  transition-timing-function: var(--ease-out);
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+}
+
+@media (max-width: 1023px) {
+  /* Tablet and phone: lighter decoration so content keeps the focus. */
+  .decor-layer {
+    opacity: 0.7;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .decor-travel {
+    display: none;
+  }
+  .animate-indeterminate {
+    animation: none !important;
+    transform: none !important;
+    width: 100% !important;
+    opacity: 0.5;
+  }
   *,
   *::before,
   *::after {

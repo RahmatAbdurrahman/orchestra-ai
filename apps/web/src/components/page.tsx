@@ -1,29 +1,46 @@
 'use client';
 
 import { AlertTriangle, ChevronLeft, ChevronRight, Inbox, RotateCw, type LucideIcon } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { MOTION } from '@/components/motion';
 import { Button } from '@/components/ui/button';
 import { Alert, Card, CardContent, Skeleton } from '@/components/ui/primitives';
 import { errorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
+
+/** Icon tile used by page headers; shares the sidebar icon for the same module. */
+function HeaderIcon({ icon: Icon }: { icon: LucideIcon }) {
+  return (
+    <span className="relative hidden size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-card text-primary shadow-sm inset-shadow-[0_1px_0_0_var(--surface-highlight)] sm:flex dark:text-info-foreground">
+      <span aria-hidden className="absolute inset-0 bg-gradient-to-br from-primary/14 via-primary/4 to-transparent" />
+      <Icon className="relative size-5" aria-hidden />
+    </span>
+  );
+}
 
 export function PageHeader({
   title,
   description,
   actions,
   eyebrow,
+  icon,
 }: {
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
   eyebrow?: ReactNode;
+  /** Module icon (decorative), shown from the sm breakpoint. */
+  icon?: LucideIcon;
 }) {
   return (
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between lg:mb-8">
-      <div className="min-w-0 space-y-1.5">
-        {eyebrow ? <div className="text-xs font-medium tracking-wide text-muted-foreground">{eyebrow}</div> : null}
-        <h1 className="text-xl leading-tight font-semibold tracking-tight text-balance sm:text-2xl">{title}</h1>
-        {description ? <p className="max-w-3xl text-sm leading-6 text-pretty text-muted-foreground">{description}</p> : null}
+      <div className="flex min-w-0 items-start gap-4">
+        {icon ? <HeaderIcon icon={icon} /> : null}
+        <div className="min-w-0 space-y-1.5">
+          {eyebrow ? <div className="text-xs font-medium tracking-wide text-muted-foreground">{eyebrow}</div> : null}
+          <h1 className="text-xl leading-tight font-semibold tracking-tight text-balance sm:text-2xl">{title}</h1>
+          {description ? <p className="max-w-3xl text-sm leading-6 text-pretty text-muted-foreground">{description}</p> : null}
+        </div>
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:justify-end">{actions}</div> : null}
     </div>
@@ -42,9 +59,37 @@ export function SectionHeader({ title, description, actions, className }: { titl
   );
 }
 
+/** Small uppercase label that groups a row of related content (e.g. KPI groups). */
+export function SectionLabel({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <p className={cn('mb-2.5 flex items-center gap-2 text-2xs font-semibold tracking-wider text-muted-foreground uppercase', className)}>
+      <span aria-hidden className="h-px w-4 bg-gradient-to-r from-primary/60 to-transparent" />
+      {children}
+    </p>
+  );
+}
+
 /** A filter/search strip that sits above a table. */
 export function Toolbar({ className, children }: { className?: string; children: ReactNode }) {
   return <div className={cn('mb-4 flex flex-col gap-2 sm:flex-row sm:items-center', className)}>{children}</div>;
+}
+
+/**
+ * Thin indeterminate bar for a list that is refetching after a filter or page change. It shows only
+ * while a request is actually in flight and never implies a percentage.
+ */
+export function FetchingBar({ active }: { active: boolean }) {
+  return (
+    <div
+      aria-hidden
+      className={cn(
+        'pointer-events-none absolute inset-x-0 top-0 z-10 h-0.5 overflow-hidden rounded-t-xl transition-opacity duration-200',
+        active ? 'opacity-100' : 'opacity-0',
+      )}
+    >
+      {active ? <div className="h-full w-1/3 animate-indeterminate bg-gradient-to-r from-transparent via-primary to-transparent" /> : null}
+    </div>
+  );
 }
 
 export function LoadingBlock({ rows = 4, className, label = 'Loading' }: { rows?: number; className?: string; label?: string }) {
@@ -74,11 +119,34 @@ export function ErrorBlock({ error, onRetry, className }: { error: unknown; onRe
   );
 }
 
+const EMPTY_TONES = {
+  default: 'text-muted-foreground',
+  success: 'text-success-foreground',
+  primary: 'text-primary dark:text-info-foreground',
+} as const;
+
+/** Icon composition for empty states: the module icon inside soft rings with orbiting dots. */
+function EmptyIllustration({ icon: Icon, tone }: { icon: LucideIcon; tone: keyof typeof EMPTY_TONES }) {
+  return (
+    <span aria-hidden className="relative mb-2 flex size-20 items-center justify-center">
+      <span className="absolute inset-0 rounded-full border border-dashed border-border-strong/70" />
+      <span className="absolute inset-2.5 rounded-full border bg-gradient-to-b from-muted/80 to-transparent" />
+      <span className="absolute top-1 right-3 size-1.5 rounded-full bg-primary/50" />
+      <span className="absolute bottom-3 left-1 size-1 rounded-full bg-primary/35" />
+      <span className="absolute top-1/2 -right-0.5 size-1 rounded-full bg-border-strong" />
+      <span className={cn('relative flex size-10 items-center justify-center rounded-full border bg-card shadow-sm', EMPTY_TONES[tone])}>
+        <Icon className="size-[18px]" />
+      </span>
+    </span>
+  );
+}
+
 export function EmptyState({
   title,
   description,
   action,
-  icon: Icon = Inbox,
+  icon = Inbox,
+  tone = 'default',
   compact,
   className,
 }: {
@@ -86,23 +154,23 @@ export function EmptyState({
   description?: ReactNode;
   action?: ReactNode;
   icon?: LucideIcon;
+  tone?: keyof typeof EMPTY_TONES;
   compact?: boolean;
   className?: string;
 }) {
   const body = (
-    <div className={cn('flex animate-fade-up flex-col items-center gap-2 text-center', compact ? 'py-8' : 'py-14')}>
-      <span className="mb-1 flex size-11 items-center justify-center rounded-full border bg-muted text-muted-foreground">
-        <Icon className="size-5" aria-hidden />
-      </span>
+    <div className={cn('flex animate-fade-up flex-col items-center gap-1.5 text-center', compact ? 'py-6' : 'py-12')}>
+      <EmptyIllustration icon={icon} tone={tone} />
       <p className="text-sm font-semibold">{title}</p>
-      {description ? <p className="max-w-sm text-[13px] leading-5 text-muted-foreground">{description}</p> : null}
-      {action ? <div className="mt-2">{action}</div> : null}
+      {description ? <p className="max-w-sm text-[13px] leading-5 text-pretty text-muted-foreground">{description}</p> : null}
+      {action ? <div className="mt-3">{action}</div> : null}
     </div>
   );
   if (compact) return <div className={className}>{body}</div>;
   return (
-    <Card className={cn('border-dashed shadow-none', className)}>
-      <CardContent className="px-6 pb-0">{body}</CardContent>
+    <Card className={cn('relative overflow-hidden border-dashed bg-card/70 shadow-none inset-shadow-none', className)}>
+      <div aria-hidden className="decor-dots decor-fade-radial pointer-events-none absolute inset-0 opacity-60" />
+      <CardContent className="relative px-6 pb-0">{body}</CardContent>
     </Card>
   );
 }
@@ -156,7 +224,7 @@ function prefersReducedMotion(): boolean {
  * Animates from the previously shown value to `target`. Only runs for real numbers;
  * null/undefined stay null so the caller can render "unavailable".
  */
-export function useCountUp(target: number | null | undefined, duration = 700): number | null {
+export function useCountUp(target: number | null | undefined, duration: number = MOTION.countUp): number | null {
   const [value, setValue] = useState<number | null>(target ?? null);
   const from = useRef<number>(0);
   useEffect(() => {
@@ -187,16 +255,16 @@ export function useCountUp(target: number | null | undefined, duration = 700): n
 
 export type StatTone = 'default' | 'success' | 'danger' | 'warning';
 
-const STAT_TONES: Record<StatTone, string> = {
-  default: 'bg-primary/10 text-primary dark:text-info-foreground',
-  success: 'bg-success/10 text-success-foreground',
-  danger: 'bg-destructive/10 text-destructive-foreground',
-  warning: 'bg-warning/12 text-warning-foreground',
+const STAT_TONES: Record<StatTone, { tile: string; color: string }> = {
+  default: { tile: 'bg-primary/10 text-primary dark:text-info-foreground', color: 'var(--primary)' },
+  success: { tile: 'bg-success/10 text-success-foreground', color: 'var(--success)' },
+  danger: { tile: 'bg-destructive/10 text-destructive-foreground', color: 'var(--destructive)' },
+  warning: { tile: 'bg-warning/12 text-warning-foreground', color: 'var(--warning)' },
 };
 
 /**
- * KPI tile. `value` is the real metric (null = not available, rendered as "—" with an explanation),
- * `format` renders it; integers count up when data arrives.
+ * KPI tile. `value` is the real metric (null = not available, rendered as "—" with a reason),
+ * `format` renders it; values count up when data arrives.
  */
 export function StatCard({
   label,
@@ -219,9 +287,19 @@ export function StatCard({
 }) {
   const animated = useCountUp(value);
   const unavailable = value === null;
+  const style = STAT_TONES[tone];
   return (
-    <Card className="group relative overflow-hidden transition-[box-shadow,border-color] duration-200 hover:border-border-strong hover:shadow-sm">
-      <CardContent className="flex items-start justify-between gap-3 px-4 pt-4 pb-4 sm:px-5 sm:pt-5 sm:pb-5">
+    <Card className="group relative overflow-hidden transition-[box-shadow,border-color,transform] duration-200 hover:-translate-y-px hover:border-border-strong hover:shadow-md" style={{ '--tone': style.color } as CSSProperties}>
+      {/* Decorative depth: a tone-coloured corner glow and a top hairline that brightens on hover. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -top-12 -right-12 size-36 rounded-full bg-[radial-gradient(closest-side,color-mix(in_oklab,var(--tone)_16%,transparent),transparent)] opacity-70 transition-opacity duration-300 group-hover:opacity-100"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-[color-mix(in_oklab,var(--tone)_55%,transparent)] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+      />
+      <CardContent className="relative flex items-start justify-between gap-3 px-4 pt-4 pb-4 sm:px-5 sm:pt-5 sm:pb-5">
         <div className="min-w-0 space-y-1.5">
           <p className="truncate text-[13px] font-medium text-muted-foreground" title={label}>
             {label}
@@ -237,8 +315,8 @@ export function StatCard({
         </div>
         <span
           className={cn(
-            'hidden size-9 shrink-0 items-center justify-center rounded-lg transition-transform duration-200 group-hover:scale-105 min-[480px]:flex',
-            STAT_TONES[tone],
+            'hidden size-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset ring-current/15 transition-transform duration-200 group-hover:scale-105 min-[480px]:flex',
+            style.tile,
           )}
         >
           <Icon className="size-[18px]" aria-hidden />
