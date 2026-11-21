@@ -56,5 +56,19 @@ Environment:
    the proxy checks that a state-changing request comes from the host it was sent to, and calls
    the API without forwarding the browser `Origin`.
 
+## Demo data
+
+`pnpm demo:data -- --base-url <web or API URL> [--robot <n>]` fills an empty environment with
+synthetic requests in every stage. It drives the real API the way the UI does: create, upload a
+sample invoice, document intelligence, verify, approve or reject. It does not write to the
+database directly.
+
+- It needs `DEMO_LOGIN_ENABLED=true` on the target.
+- Titles start with `[DEMO]`.
+- `--robot n` fully approves `n` requests (default 1). Each one starts a **real** UiPath job, so
+  the robot PC must be ready.
+- Each run adds a new set; it is not idempotent. The audit trail is append-only, so demo events
+  stay in it.
+
 The browser only talks to Vercel. The Vercel server proxies `/api/v1/*` to Render, so the session
 cookie stays first-party on the Vercel domain.

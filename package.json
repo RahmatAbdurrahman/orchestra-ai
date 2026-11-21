@@ -21,7 +21,8 @@
     "dev:worker": "pnpm --filter @orchestra/worker run dev",
     "dev:web": "pnpm --filter @orchestra/web run dev",
     "dev:erp": "pnpm --filter @orchestra/erp-simulation run dev",
-    "dev:uipath-mock": "pnpm --filter @orchestra/uipath-orchestrator-mock run dev"
+    "dev:uipath-mock": "pnpm --filter @orchestra/uipath-orchestrator-mock run dev",
+    "demo:data": "node scripts/demo-data.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.18.0",
