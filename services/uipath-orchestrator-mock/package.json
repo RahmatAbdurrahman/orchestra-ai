@@ -1,0 +1,27 @@
+{
+  "name": "@orchestra/uipath-orchestrator-mock",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DEVELOPMENT/TEST ONLY: mock of the UiPath Orchestrator API subset used by Orchestra AI, with a simulated robot that operates the ERP simulation web UI.",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "tsc -p tsconfig.build.json && node dist/server.js",
+    "start": "node dist/server.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "@orchestra/erp-simulation": "workspace:*",
+    "@types/express": "^5.0.3",
+    "@types/jest": "^29.5.14",
+    "@types/supertest": "^6.0.3",
+    "jest": "29.7.0",
+    "supertest": "^7.1.4",
+    "ts-jest": "29.4.15",
+    "typescript": "5.9.3"
+  }
+}

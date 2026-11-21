@@ -1,0 +1,226 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="CreatePurchaseOrder"
+  xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json"
+  xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib"
+  xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation"
+  xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation"
+  xmlns:sco="clr-namespace:System.Collections.ObjectModel;assembly=System.Private.CoreLib"
+  xmlns:ui="http://schemas.uipath.com/workflow/activities"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    Fills the SimERP "New purchase order" form and reads the result screen.
+      - The integration key (Orchestra idempotency key) makes the ERP return ALREADY_EXISTS
+        with the original PO number instead of creating a duplicate.
+      - Result screen ids: #result-status (CREATED | ALREADY_EXISTS | ERROR), #po-number, #result-message.
+      - ERROR (vendor blocked, invalid data) is raised as a BusinessRuleException (not retryable).
+  -->
+  <x:Members>
+    <x:Property Name="in_Payload" Type="InArgument(njl:JObject)" />
+    <x:Property Name="in_IdempotencyKey" Type="InArgument(x:String)" />
+    <x:Property Name="out_Status" Type="OutArgument(x:String)" />
+    <x:Property Name="out_PoNumber" Type="OutArgument(x:String)" />
+    <x:Property Name="out_Message" Type="OutArgument(x:String)" />
+    <x:Property Name="in_Browser" Type="InArgument(ui:Browser)" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <TextExpression.NamespacesForImplementation>
+    <sco:Collection x:TypeArguments="x:String">
+      <x:String>System</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+      <x:String>Newtonsoft.Json.Linq</x:String>
+    </sco:Collection>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <sco:Collection x:TypeArguments="AssemblyReference">
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.UiAutomation.Activities</AssemblyReference>
+      <AssemblyReference>Newtonsoft.Json</AssemblyReference>
+    </sco:Collection>
+  </TextExpression.ReferencesForImplementation>
+  <ui:BrowserScope Browser="[in_Browser]" DisplayName="Attach SimERP browser (opened by Main)">
+    <ui:BrowserScope.Body>
+      <ActivityAction x:TypeArguments="x:Object">
+        <ActivityAction.Argument>
+          <DelegateInArgument x:TypeArguments="x:Object" Name="ContextTarget" />
+        </ActivityAction.Argument>
+          <Sequence DisplayName="Create purchase order">
+            <Sequence.Variables>
+              <Variable x:TypeArguments="x:String" Name="resultStatus" />
+              <Variable x:TypeArguments="x:String" Name="vendorOption" />
+              <Variable x:TypeArguments="x:String" Name="rowPrefix" />
+            </Sequence.Variables>
+            <ui:Click ClickType="CLICK_SINGLE" DisplayName="Click 'New purchase order'" MouseButton="BTN_LEFT" SimulateClick="True">
+              <ui:Click.Target>
+                <ui:Target Selector="&lt;webctrl id='new-po-button' /&gt;" WaitForReady="COMPLETE" />
+              </ui:Click.Target>
+            </ui:Click>
+
+            <If Condition="[Not String.IsNullOrEmpty(in_Payload(&quot;supplierCode&quot;).ToString)]" DisplayName="Vendor in ERP master?">
+              <If.Then>
+                <Sequence DisplayName="Select vendor code">
+                  <Assign DisplayName="Option text = code - name">
+                    <Assign.To>
+                      <OutArgument x:TypeArguments="x:String">[vendorOption]</OutArgument>
+                    </Assign.To>
+                    <Assign.Value>
+                      <InArgument x:TypeArguments="x:String">[in_Payload(&quot;supplierCode&quot;).ToString + &quot; - &quot; + in_Payload(&quot;supplierName&quot;).ToString]</InArgument>
+                    </Assign.Value>
+                  </Assign>
+                  <ui:SelectItem DisplayName="Select Item 'Vendor code'" Item="[vendorOption]">
+                    <ui:SelectItem.Target>
+                      <ui:Target Selector="&lt;webctrl id='supplierCode' tag='SELECT' /&gt;" WaitForReady="COMPLETE" />
+                    </ui:SelectItem.Target>
+                  </ui:SelectItem>
+                </Sequence>
+              </If.Then>
+            </If>
+
+            <ui:TypeInto Activate="True" ClickBeforeTyping="True" DisplayName="Type Into 'Vendor name'" EmptyField="True" SimulateType="True" Text="[in_Payload(&quot;supplierName&quot;).ToString]">
+              <ui:TypeInto.Target>
+                <ui:Target Selector="&lt;webctrl id='supplierName' tag='INPUT' /&gt;" WaitForReady="COMPLETE" />
+              </ui:TypeInto.Target>
+            </ui:TypeInto>
+            <ui:TypeInto Activate="True" ClickBeforeTyping="True" DisplayName="Type Into 'External reference'" EmptyField="True" SimulateType="True" Text="[in_Payload(&quot;requestNumber&quot;).ToString]">
+              <ui:TypeInto.Target>
+                <ui:Target Selector="&lt;webctrl id='externalReference' tag='INPUT' /&gt;" WaitForReady="COMPLETE" />
+              </ui:TypeInto.Target>
+            </ui:TypeInto>
+            <ui:TypeInto Activate="True" ClickBeforeTyping="True" DisplayName="Type Into 'Integration key'" EmptyField="True" SimulateType="True" Text="[in_IdempotencyKey]">
+              <ui:TypeInto.Target>
+                <ui:Target Selector="&lt;webctrl id='integrationKey' tag='INPUT' /&gt;" WaitForReady="COMPLETE" />
+              </ui:TypeInto.Target>
+            </ui:TypeInto>
+            <ui:SelectItem DisplayName="Select Item 'Currency'" Item="[in_Payload(&quot;currency&quot;).ToString]">
+              <ui:SelectItem.Target>
+                <ui:Target Selector="&lt;webctrl id='currency' tag='SELECT' /&gt;" WaitForReady="COMPLETE" />
+              </ui:SelectItem.Target>
+            </ui:SelectItem>
+            <ui:TypeInto Activate="True" ClickBeforeTyping="True" DisplayName="Type Into 'Required date'" EmptyField="True" SimulateType="True" Text="[in_Payload(&quot;requiredDate&quot;).ToString]">
+              <ui:TypeInto.Target>
+                <ui:Target Selector="&lt;webctrl id='requiredDate' tag='INPUT' /&gt;" WaitForReady="COMPLETE" />
+              </ui:TypeInto.Target>
+            </ui:TypeInto>
+            <ui:TypeInto Activate="True" ClickBeforeTyping="True" DisplayName="Type Into 'Supplier document no.'" EmptyField="True" SimulateType="True" Text="[If(in_Payload(&quot;documentNumber&quot;).Type = JTokenType.Null, &quot;&quot;, in_Payload(&quot;documentNumber&quot;).ToString)]">
+              <ui:TypeInto.Target>
+                <ui:Target Selector="&lt;webctrl id='documentNumber' tag='INPUT' /&gt;" WaitForReady="COMPLETE" />
+              </ui:TypeInto.Target>
+            </ui:TypeInto>
+            <ui:TypeInto Activate="True" ClickBeforeTyping="True" DisplayName="Type Into 'Tax amount'" EmptyField="True" SimulateType="True" Text="[CDec(in_Payload(&quot;taxAmount&quot;)).ToString(System.Globalization.CultureInfo.InvariantCulture)]">
+              <ui:TypeInto.Target>
+                <ui:Target Selector="&lt;webctrl id='taxAmount' tag='INPUT' /&gt;" WaitForReady="COMPLETE" />
+              </ui:TypeInto.Target>
+            </ui:TypeInto>
+
+            <ui:ForEach x:TypeArguments="njl:JToken" CurrentIndex="{x:Null}" DisplayName="For each line item" Values="[CType(in_Payload(&quot;items&quot;), JArray)]">
+              <ui:ForEach.Body>
+                <ActivityAction x:TypeArguments="njl:JToken">
+                  <ActivityAction.Argument>
+                    <DelegateInArgument x:TypeArguments="njl:JToken" Name="item" />
+                  </ActivityAction.Argument>
+                  <Sequence DisplayName="Fill item row">
+                    <Assign DisplayName="Row element prefix (item-N-)">
+                      <Assign.To>
+                        <OutArgument x:TypeArguments="x:String">[rowPrefix]</OutArgument>
+                      </Assign.To>
+                      <Assign.Value>
+                        <InArgument x:TypeArguments="x:String">[&quot;item-&quot; + item(&quot;lineNo&quot;).ToString + &quot;-&quot;]</InArgument>
+                      </Assign.Value>
+                    </Assign>
+                    <ui:TypeInto Activate="True" ClickBeforeTyping="True" DisplayName="Type Into item description" EmptyField="True" SimulateType="True" Text="[item(&quot;description&quot;).ToString]">
+                      <ui:TypeInto.Target>
+                        <ui:Target Selector="[&quot;&lt;webctrl id='&quot; + rowPrefix + &quot;description' tag='INPUT' /&gt;&quot;]" WaitForReady="COMPLETE" />
+                      </ui:TypeInto.Target>
+                    </ui:TypeInto>
+                    <ui:TypeInto Activate="True" ClickBeforeTyping="True" DisplayName="Type Into item quantity" EmptyField="True" SimulateType="True" Text="[item(&quot;quantity&quot;).ToString]">
+                      <ui:TypeInto.Target>
+                        <ui:Target Selector="[&quot;&lt;webctrl id='&quot; + rowPrefix + &quot;quantity' tag='INPUT' /&gt;&quot;]" WaitForReady="COMPLETE" />
+                      </ui:TypeInto.Target>
+                    </ui:TypeInto>
+                    <ui:TypeInto Activate="True" ClickBeforeTyping="True" DisplayName="Type Into item unit price" EmptyField="True" SimulateType="True" Text="[CDec(item(&quot;unitPrice&quot;)).ToString(System.Globalization.CultureInfo.InvariantCulture)]">
+                      <ui:TypeInto.Target>
+                        <ui:Target Selector="[&quot;&lt;webctrl id='&quot; + rowPrefix + &quot;unitPrice' tag='INPUT' /&gt;&quot;]" WaitForReady="COMPLETE" />
+                      </ui:TypeInto.Target>
+                    </ui:TypeInto>
+                  </Sequence>
+                </ActivityAction>
+              </ui:ForEach.Body>
+            </ui:ForEach>
+
+            <ui:Click ClickType="CLICK_SINGLE" DisplayName="Click 'Create purchase order'" MouseButton="BTN_LEFT" SimulateClick="True">
+              <ui:Click.Target>
+                <ui:Target Selector="&lt;webctrl id='submit-po' tag='BUTTON' /&gt;" WaitForReady="COMPLETE" />
+              </ui:Click.Target>
+            </ui:Click>
+
+            <ui:GetValue DisplayName="Get Text 'Result status'">
+              <ui:GetValue.Value>
+                <OutArgument x:TypeArguments="x:String">[resultStatus]</OutArgument>
+              </ui:GetValue.Value>
+              <ui:GetValue.Target>
+                <ui:Target Selector="&lt;webctrl id='result-status' /&gt;" TimeoutMS="30000" WaitForReady="COMPLETE" />
+              </ui:GetValue.Target>
+            </ui:GetValue>
+            <ui:GetValue DisplayName="Get Text 'Result message'">
+              <ui:GetValue.Value>
+                <OutArgument x:TypeArguments="x:String">[out_Message]</OutArgument>
+              </ui:GetValue.Value>
+              <ui:GetValue.Target>
+                <ui:Target Selector="&lt;webctrl id='result-message' /&gt;" WaitForReady="COMPLETE" />
+              </ui:GetValue.Target>
+            </ui:GetValue>
+
+            <Switch x:TypeArguments="x:String" DisplayName="Interpret result" Expression="[resultStatus.Trim]">
+              <Switch.Default>
+                <Throw DisplayName="Unexpected result screen" Exception="[New Exception(&quot;Unexpected SimERP result status: &quot; + resultStatus)]" />
+              </Switch.Default>
+              <Sequence x:Key="CREATED" DisplayName="Created">
+                <ui:GetValue DisplayName="Get Text 'PO number'">
+                  <ui:GetValue.Value>
+                    <OutArgument x:TypeArguments="x:String">[out_PoNumber]</OutArgument>
+                  </ui:GetValue.Value>
+                  <ui:GetValue.Target>
+                    <ui:Target Selector="&lt;webctrl id='po-number' /&gt;" WaitForReady="COMPLETE" />
+                  </ui:GetValue.Target>
+                </ui:GetValue>
+                <Assign DisplayName="out_Status = CREATED">
+                  <Assign.To>
+                    <OutArgument x:TypeArguments="x:String">[out_Status]</OutArgument>
+                  </Assign.To>
+                  <Assign.Value>
+                    <InArgument x:TypeArguments="x:String">CREATED</InArgument>
+                  </Assign.Value>
+                </Assign>
+              </Sequence>
+              <Sequence x:Key="ALREADY_EXISTS" DisplayName="Already exists (duplicate prevented by the ERP)">
+                <ui:GetValue DisplayName="Get Text 'PO number'">
+                  <ui:GetValue.Value>
+                    <OutArgument x:TypeArguments="x:String">[out_PoNumber]</OutArgument>
+                  </ui:GetValue.Value>
+                  <ui:GetValue.Target>
+                    <ui:Target Selector="&lt;webctrl id='po-number' /&gt;" WaitForReady="COMPLETE" />
+                  </ui:GetValue.Target>
+                </ui:GetValue>
+                <Assign DisplayName="out_Status = ALREADY_EXISTS">
+                  <Assign.To>
+                    <OutArgument x:TypeArguments="x:String">[out_Status]</OutArgument>
+                  </Assign.To>
+                  <Assign.Value>
+                    <InArgument x:TypeArguments="x:String">ALREADY_EXISTS</InArgument>
+                  </Assign.Value>
+                </Assign>
+              </Sequence>
+              <Throw x:Key="ERROR" DisplayName="ERP rejected the order (business exception)" Exception="[New BusinessRuleException(out_Message)]" />
+            </Switch>
+            <ui:LogMessage DisplayName="Log PO" Level="Info" Message="[out_Status + &quot; &quot; + out_PoNumber]" />
+          </Sequence>
+      </ActivityAction>
+    </ui:BrowserScope.Body>
+  </ui:BrowserScope>
+</Activity>

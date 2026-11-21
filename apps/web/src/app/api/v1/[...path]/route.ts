@@ -1,0 +1,48 @@
+/**
+ * Same-origin proxy to the Orchestra API. The browser only talks to the web
+ * origin, so the HttpOnly session cookie never crosses origins, and the API
+ * address is configured at runtime (API_INTERNAL_URL).
+ */
+import type { NextRequest } from 'next/server';
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
+const API_URL = (process.env.API_INTERNAL_URL ?? 'http://localhost:4000').replace(/\/+$/, '');
+const FORWARD_REQUEST_HEADERS = ['content-type', 'cookie', 'accept', 'user-agent', 'origin', 'x-correlation-id', 'x-forwarded-for'];
+const DROP_RESPONSE_HEADERS = new Set(['set-cookie', 'content-encoding', 'content-length', 'transfer-encoding', 'connection', 'keep-alive']);
+
+async function proxy(request: NextRequest, context: { params: Promise<{ path: string[] }> }): Promise<Response> {
+  const { path } = await context.params;
+  const search = new URL(request.url).search;
+  const target = `${API_URL}/api/v1/${path.map(encodeURIComponent).join('/')}${search}`;
+
+  const headers = new Headers();
+  for (const name of FORWARD_REQUEST_HEADERS) {
+    const value = request.headers.get(name);
+    if (value) headers.set(name, value);
+  }
+  const init: RequestInit & { duplex?: 'half' } = { method: request.method, headers, redirect: 'manual', cache: 'no-store' };
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    init.body = request.body;
+    init.duplex = 'half';
+  }
+
+  let upstream: Response;
+  try {
+    upstream = await fetch(target, init);
+  } catch {
+    return Response.json(
+      { error: { code: 'API_UNAVAILABLE', message: 'The Orchestra API is not reachable', correlationId: null } },
+      { status: 502 },
+    );
+  }
+  const responseHeaders = new Headers();
+  upstream.headers.forEach((value, key) => {
+    if (!DROP_RESPONSE_HEADERS.has(key.toLowerCase())) responseHeaders.set(key, value);
+  });
+  for (const cookie of upstream.headers.getSetCookie()) responseHeaders.append('set-cookie', cookie);
+  return new Response(upstream.body, { status: upstream.status, headers: responseHeaders });
+}
+
+export { proxy as GET, proxy as POST, proxy as PATCH, proxy as PUT, proxy as DELETE };

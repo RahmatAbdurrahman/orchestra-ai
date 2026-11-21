@@ -1,0 +1,187 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Main" this:Main.in_ExecutionId="studio-test-001" this:Main.in_PurchaseRequestId="00000000-0000-0000-0000-000000000001" this:Main.in_RequestNumber="PR-2026-900001" this:Main.in_WorkflowId="studio" this:Main.in_CorrelationId="studio-test" this:Main.in_IdempotencyKey="oa-po-studio-test-001" this:Main.in_PurchaseOrderJson="{}{&quot;requestNumber&quot;:&quot;PR-2026-900001&quot;,&quot;supplierCode&quot;:&quot;SUP-001&quot;,&quot;supplierName&quot;:&quot;PT Sinar Jaya Abadi&quot;,&quot;currency&quot;:&quot;IDR&quot;,&quot;requiredDate&quot;:&quot;2026-12-31&quot;,&quot;documentNumber&quot;:&quot;INV/2026/11/0042&quot;,&quot;department&quot;:&quot;Operations&quot;,&quot;taxAmount&quot;:264000,&quot;totalAmount&quot;:2664000,&quot;items&quot;:[{&quot;lineNo&quot;:1,&quot;description&quot;:&quot;Laptop stand aluminium&quot;,&quot;quantity&quot;:2,&quot;unitPrice&quot;:750000},{&quot;lineNo&quot;:2,&quot;description&quot;:&quot;Wireless keyboard and mouse set&quot;,&quot;quantity&quot;:2,&quot;unitPrice&quot;:450000}]}" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:sco="clr-namespace:System.Collections.ObjectModel;assembly=System.Private.CoreLib" xmlns:ss="clr-namespace:System.Security;assembly=System.Private.CoreLib" xmlns:this="clr-namespace:" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property Name="in_ExecutionId" Type="InArgument(x:String)" />
+    <x:Property Name="in_PurchaseRequestId" Type="InArgument(x:String)" />
+    <x:Property Name="in_RequestNumber" Type="InArgument(x:String)" />
+    <x:Property Name="in_WorkflowId" Type="InArgument(x:String)" />
+    <x:Property Name="in_CorrelationId" Type="InArgument(x:String)" />
+    <x:Property Name="in_IdempotencyKey" Type="InArgument(x:String)" />
+    <x:Property Name="in_PurchaseOrderJson" Type="InArgument(x:String)" />
+    <x:Property Name="out_Status" Type="OutArgument(x:String)" />
+    <x:Property Name="out_PoNumber" Type="OutArgument(x:String)" />
+    <x:Property Name="out_IdempotencyKey" Type="OutArgument(x:String)" />
+    <x:Property Name="out_ErpReference" Type="OutArgument(x:String)" />
+    <x:Property Name="out_Message" Type="OutArgument(x:String)" />
+    <x:Property Name="out_ScreenshotPath" Type="OutArgument(x:String)" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <sco:Collection x:TypeArguments="x:String">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>Newtonsoft.Json.Linq</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Collections.ObjectModel</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>System.Security</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+    </sco:Collection>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <sco:Collection x:TypeArguments="AssemblyReference">
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.UiAutomation.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Web.Activities</AssemblyReference>
+      <AssemblyReference>Newtonsoft.Json</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+      <AssemblyReference>UiPath.Studio.Constants</AssemblyReference>
+    </sco:Collection>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence DisplayName="Main - Create purchase order in SimERP" sap:VirtualizedContainerService.HintSize="1006.8,2740" sap2010:WorkflowViewState.IdRef="Sequence_5">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:String" Name="erpUrl" />
+      <Variable x:TypeArguments="x:String" Name="erpUsername" />
+      <Variable x:TypeArguments="ss:SecureString" Name="erpPassword" />
+      <Variable x:TypeArguments="njl:JObject" Name="payload" />
+      <Variable x:TypeArguments="ui:Browser" Name="erpBrowser" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <ui:LogMessage DisplayName="Log start" sap:VirtualizedContainerService.HintSize="718.4,174.4" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Info" Message="[&quot;Orchestra execution &quot; + in_ExecutionId + &quot; for &quot; + in_RequestNumber + &quot; (correlation &quot; + in_CorrelationId + &quot;)&quot;]" />
+    <Assign DisplayName="Echo idempotency key" sap:VirtualizedContainerService.HintSize="718.4,174.4" sap2010:WorkflowViewState.IdRef="Assign_1">
+      <Assign.To>
+        <OutArgument x:TypeArguments="x:String">[out_IdempotencyKey]</OutArgument>
+      </Assign.To>
+      <Assign.Value>
+        <InArgument x:TypeArguments="x:String">[in_IdempotencyKey]</InArgument>
+      </Assign.Value>
+    </Assign>
+    <TryCatch DisplayName="Create purchase order" sap:VirtualizedContainerService.HintSize="718.4,2202.4" sap2010:WorkflowViewState.IdRef="TryCatch_1">
+      <TryCatch.Try>
+        <Sequence DisplayName="Try" sap:VirtualizedContainerService.HintSize="716.8,963.2" sap2010:WorkflowViewState.IdRef="Sequence_2">
+          <sap:WorkflowViewStateService.ViewState>
+            <scg:Dictionary x:TypeArguments="x:String, x:Object">
+              <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+            </scg:Dictionary>
+          </sap:WorkflowViewStateService.ViewState>
+          <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" ContinueOnError="{x:Null}" DisplayName="Invoke InitializeSettings.xaml" sap:VirtualizedContainerService.HintSize="683.2,145.6" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_1" UnSafe="False" WorkflowFileName="Workflows\InitializeSettings.xaml">
+            <ui:InvokeWorkflowFile.Arguments>
+              <OutArgument x:TypeArguments="x:String" x:Key="out_ErpUrl">[erpUrl]</OutArgument>
+              <OutArgument x:TypeArguments="x:String" x:Key="out_ErpUsername">[erpUsername]</OutArgument>
+              <OutArgument x:TypeArguments="ss:SecureString" x:Key="out_ErpPassword">[erpPassword]</OutArgument>
+            </ui:InvokeWorkflowFile.Arguments>
+          </ui:InvokeWorkflowFile>
+          <ui:DeserializeJson x:TypeArguments="njl:JObject" DisplayName="Deserialize purchase order payload" sap:VirtualizedContainerService.HintSize="683.2,92" sap2010:WorkflowViewState.IdRef="DeserializeJson`1_1" JsonObject="[payload]" JsonString="[in_PurchaseOrderJson]" />
+          <ui:OpenBrowser AutomaticallyDownloadWebDriver="{x:Null}" CommunicationMethod="{x:Null}" Hidden="{x:Null}" BrowserType="Chrome" DisplayName="Open SimERP" sap:VirtualizedContainerService.HintSize="683.2,665.6" sap2010:WorkflowViewState.IdRef="OpenBrowser_1" NewSession="True" Private="False" UiBrowser="[erpBrowser]" Url="[erpUrl]">
+            <ui:OpenBrowser.Body>
+              <ActivityAction x:TypeArguments="x:Object">
+                <ActivityAction.Argument>
+                  <DelegateInArgument x:TypeArguments="x:Object" Name="ContextTarget" />
+                </ActivityAction.Argument>
+                <Sequence DisplayName="Do" sap:VirtualizedContainerService.HintSize="649.6,516.8" sap2010:WorkflowViewState.IdRef="Sequence_1">
+                  <sap:WorkflowViewStateService.ViewState>
+                    <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                      <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                    </scg:Dictionary>
+                  </sap:WorkflowViewStateService.ViewState>
+                </Sequence>
+              </ActivityAction>
+            </ui:OpenBrowser.Body>
+          </ui:OpenBrowser>
+          <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" ContinueOnError="{x:Null}" DisplayName="Invoke LoginToErp.xaml" sap:VirtualizedContainerService.HintSize="616,145.6" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_2" UnSafe="False" WorkflowFileName="Workflows\LoginToErp.xaml">
+            <ui:InvokeWorkflowFile.Arguments>
+              <InArgument x:TypeArguments="ui:Browser" x:Key="in_Browser">[erpBrowser]</InArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_Username">[erpUsername]</InArgument>
+              <InArgument x:TypeArguments="ss:SecureString" x:Key="in_Password">[erpPassword]</InArgument>
+            </ui:InvokeWorkflowFile.Arguments>
+          </ui:InvokeWorkflowFile>
+          <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" ContinueOnError="{x:Null}" DisplayName="Invoke CreatePurchaseOrder.xaml" sap:VirtualizedContainerService.HintSize="616,145.6" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_3" UnSafe="False" WorkflowFileName="Workflows\CreatePurchaseOrder.xaml">
+            <ui:InvokeWorkflowFile.Arguments>
+              <InArgument x:TypeArguments="ui:Browser" x:Key="in_Browser">[erpBrowser]</InArgument>
+              <InArgument x:TypeArguments="njl:JObject" x:Key="in_Payload">[payload]</InArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_IdempotencyKey">[in_IdempotencyKey]</InArgument>
+              <OutArgument x:TypeArguments="x:String" x:Key="out_Status">[out_Status]</OutArgument>
+              <OutArgument x:TypeArguments="x:String" x:Key="out_PoNumber">[out_PoNumber]</OutArgument>
+              <OutArgument x:TypeArguments="x:String" x:Key="out_Message">[out_Message]</OutArgument>
+            </ui:InvokeWorkflowFile.Arguments>
+          </ui:InvokeWorkflowFile>
+          <Assign DisplayName="ERP reference = PO number" sap:VirtualizedContainerService.HintSize="616,165.6" sap2010:WorkflowViewState.IdRef="Assign_2">
+            <Assign.To>
+              <OutArgument x:TypeArguments="x:String">[out_ErpReference]</OutArgument>
+            </Assign.To>
+            <Assign.Value>
+              <InArgument x:TypeArguments="x:String">[out_PoNumber]</InArgument>
+            </Assign.Value>
+          </Assign>
+        </Sequence>
+      </TryCatch.Try>
+      <TryCatch.Catches>
+        <Catch x:TypeArguments="ui:BusinessRuleException" sap2010:WorkflowViewState.IdRef="Catch`1_1">
+          <ActivityAction x:TypeArguments="ui:BusinessRuleException">
+            <ActivityAction.Argument>
+              <DelegateInArgument x:TypeArguments="ui:BusinessRuleException" Name="businessException" />
+            </ActivityAction.Argument>
+            <Sequence DisplayName="Business error: report, do not fault" sap:VirtualizedContainerService.HintSize="716.8,574.4" sap2010:WorkflowViewState.IdRef="Sequence_3">
+              <sap:WorkflowViewStateService.ViewState>
+                <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                  <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                </scg:Dictionary>
+              </sap:WorkflowViewStateService.ViewState>
+              <ui:LogMessage DisplayName="Log business error" sap:VirtualizedContainerService.HintSize="683.2,174.4" sap2010:WorkflowViewState.IdRef="LogMessage_2" Level="Warn" Message="[&quot;Business error: &quot; + businessException.Message]" />
+              <Assign DisplayName="out_Status = BUSINESS_ERROR" sap:VirtualizedContainerService.HintSize="683.2,174.4" sap2010:WorkflowViewState.IdRef="Assign_3">
+                <Assign.To>
+                  <OutArgument x:TypeArguments="x:String">[out_Status]</OutArgument>
+                </Assign.To>
+                <Assign.Value>
+                  <InArgument x:TypeArguments="x:String">BUSINESS_ERROR</InArgument>
+                </Assign.Value>
+              </Assign>
+              <Assign DisplayName="out_Message" sap:VirtualizedContainerService.HintSize="683.2,165.6" sap2010:WorkflowViewState.IdRef="Assign_4">
+                <Assign.To>
+                  <OutArgument x:TypeArguments="x:String">[out_Message]</OutArgument>
+                </Assign.To>
+                <Assign.Value>
+                  <InArgument x:TypeArguments="x:String">[businessException.Message]</InArgument>
+                </Assign.Value>
+              </Assign>
+            </Sequence>
+          </ActivityAction>
+        </Catch>
+        <Catch x:TypeArguments="s:Exception" sap2010:WorkflowViewState.IdRef="Catch`1_2">
+          <ActivityAction x:TypeArguments="s:Exception">
+            <ActivityAction.Argument>
+              <DelegateInArgument x:TypeArguments="s:Exception" Name="systemException" />
+            </ActivityAction.Argument>
+            <Sequence DisplayName="System error: screenshot and fault the job" sap:VirtualizedContainerService.HintSize="716.8,428" sap2010:WorkflowViewState.IdRef="Sequence_4">
+              <sap:WorkflowViewStateService.ViewState>
+                <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                  <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+                </scg:Dictionary>
+              </sap:WorkflowViewStateService.ViewState>
+              <ui:LogMessage DisplayName="Log system error" sap:VirtualizedContainerService.HintSize="683.2,174.4" sap2010:WorkflowViewState.IdRef="LogMessage_3" Level="Error" Message="[&quot;System exception: &quot; + systemException.Message]" />
+              <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" ContinueOnError="True" DisplayName="Invoke CaptureScreenshot.xaml" sap:VirtualizedContainerService.HintSize="683.2,145.6" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_4" UnSafe="False" WorkflowFileName="Workflows\CaptureScreenshot.xaml">
+                <ui:InvokeWorkflowFile.Arguments>
+                  <InArgument x:TypeArguments="x:String" x:Key="in_ExecutionId">[in_ExecutionId]</InArgument>
+                  <OutArgument x:TypeArguments="x:String" x:Key="out_ScreenshotPath">[out_ScreenshotPath]</OutArgument>
+                </ui:InvokeWorkflowFile.Arguments>
+              </ui:InvokeWorkflowFile>
+              <Rethrow DisplayName="Fault the job (Orchestra AI offers a safe retry)" sap:VirtualizedContainerService.HintSize="683.2,48" sap2010:WorkflowViewState.IdRef="Rethrow_1" />
+            </Sequence>
+          </ActivityAction>
+        </Catch>
+      </TryCatch.Catches>
+    </TryCatch>
+    <ui:LogMessage DisplayName="Log result" sap:VirtualizedContainerService.HintSize="718.4,165.6" sap2010:WorkflowViewState.IdRef="LogMessage_4" Level="Info" Message="[&quot;Result &quot; + out_Status + &quot; &quot; + If(out_PoNumber, &quot;&quot;) + &quot; for &quot; + in_RequestNumber]" />
+  </Sequence>
+</Activity>

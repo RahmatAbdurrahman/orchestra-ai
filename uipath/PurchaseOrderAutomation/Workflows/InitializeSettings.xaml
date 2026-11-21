@@ -1,0 +1,47 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="InitializeSettings"
+  xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation"
+  xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation"
+  xmlns:sco="clr-namespace:System.Collections.ObjectModel;assembly=System.Private.CoreLib"
+  xmlns:ss="clr-namespace:System.Security;assembly=System.Private.CoreLib"
+  xmlns:ui="http://schemas.uipath.com/workflow/activities"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    Reads the robot settings from Orchestrator assets (folder of the process):
+      ERP_Simulation_Url         Text        e.g. http://localhost:4100
+      ERP_Simulation_Credential  Credential  SimERP robot account (ERP_USERNAME / ERP_PASSWORD)
+    Credentials never appear in logs or arguments sent back to Orchestra AI.
+  -->
+  <x:Members>
+    <x:Property Name="out_ErpUrl" Type="OutArgument(x:String)" />
+    <x:Property Name="out_ErpUsername" Type="OutArgument(x:String)" />
+    <x:Property Name="out_ErpPassword" Type="OutArgument(ss:SecureString)" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <TextExpression.NamespacesForImplementation>
+    <sco:Collection x:TypeArguments="x:String">
+      <x:String>System</x:String>
+      <x:String>System.Security</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+    </sco:Collection>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <sco:Collection x:TypeArguments="AssemblyReference">
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+    </sco:Collection>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence DisplayName="Initialize settings">
+    <ui:GetRobotAsset AssetName="ERP_Simulation_Url" CacheStrategy="None" DisplayName="Get asset ERP_Simulation_Url" TimeoutMS="{x:Null}">
+      <ui:GetRobotAsset.Value>
+        <OutArgument x:TypeArguments="x:String">[out_ErpUrl]</OutArgument>
+      </ui:GetRobotAsset.Value>
+    </ui:GetRobotAsset>
+    <ui:GetRobotCredential AssetName="ERP_Simulation_Credential" CacheStrategy="None" DisplayName="Get credential ERP_Simulation_Credential" Password="[out_ErpPassword]" TimeoutMS="{x:Null}" Username="[out_ErpUsername]" />
+    <ui:LogMessage DisplayName="Log settings loaded" Level="Info" Message="[&quot;SimERP URL: &quot; + out_ErpUrl]" />
+  </Sequence>
+</Activity>

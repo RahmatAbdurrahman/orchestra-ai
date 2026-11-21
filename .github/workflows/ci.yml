@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  node:
+    name: Node (typecheck, unit, integration)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: orchestra
+          POSTGRES_PASSWORD: orchestra
+          POSTGRES_DB: orchestra_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U orchestra -d orchestra_test"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+      redis:
+        image: redis:7.4-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://orchestra:orchestra@localhost:5432/orchestra_test?schema=public
+      TEST_DATABASE_URL: postgresql://orchestra:orchestra@localhost:5432/orchestra_test?schema=public
+      REDIS_URL: redis://localhost:6379
+      CHECKPOINT_DISABLE: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build shared packages
+        run: pnpm --filter "./packages/*" run build
+      - name: Build services and apps
+        run: pnpm --filter @orchestra/erp-simulation --filter @orchestra/uipath-orchestrator-mock --filter @orchestra/api --filter @orchestra/worker run build
+      - name: Typecheck
+        run: pnpm -r --filter "!@orchestra/e2e" run typecheck
+      - name: Unit tests
+        run: pnpm -r --filter "!@orchestra/e2e" run test
+      - name: Apply migrations
+        run: pnpm --filter @orchestra/database exec prisma migrate deploy
+      - name: API integration tests (PostgreSQL, mocked UiPath)
+        run: pnpm --filter @orchestra/api run test:integration
+      - name: Worker BullMQ tests (Redis)
+        run: pnpm --filter @orchestra/worker run test:integration
+      - name: Build web
+        run: pnpm --filter @orchestra/web run build
+
+  python:
+    name: Python document intelligence
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/document-intelligence
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Tesseract
+        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr tesseract-ocr-ind
+      - run: pip install -e ".[dev]"
+      - run: pytest
+
+  e2e:
+    name: End-to-end (Docker Compose, mocked UiPath)
+    runs-on: ubuntu-latest
+    needs: [node, python]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Start the stack
+        run: docker compose up --build --detach --wait
+      - run: pnpm install --frozen-lockfile --filter @orchestra/e2e
+      - run: pnpm --filter @orchestra/e2e exec playwright install --with-deps chromium
+      - name: Playwright
+        env:
+          UIPATH_MOCK_ADMIN_TOKEN: dev-mock-admin-change-me
+          ERP_API_TOKEN: dev-erp-api-token-change-me
+          UIPATH_ORCHESTRATOR_URL: http://localhost:4200
+          ERP_SIMULATION_URL: http://localhost:4100
+        run: pnpm --filter @orchestra/e2e run test
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail 200
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: tests/e2e/playwright-report
+          retention-days: 7
+      - if: always()
+        run: docker compose down --volumes

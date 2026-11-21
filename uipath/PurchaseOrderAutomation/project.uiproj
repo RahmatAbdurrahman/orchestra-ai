@@ -1,0 +1,6 @@
+{
+  "Name": "PurchaseOrderAutomation",
+  "ProjectType": "Process",
+  "Description": "Creates a purchase order in the SimERP web application for an approved Orchestra AI purchase request. Idempotent by integration key; returns the PO number to Orchestra AI.",
+  "MainFile": "Main.xaml"
+}

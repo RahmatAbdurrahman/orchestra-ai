@@ -1,0 +1,6 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+  - "services/erp-simulation"
+  - "services/uipath-orchestrator-mock"
+  - "tests/e2e"

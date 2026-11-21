@@ -1,0 +1,19 @@
+Metadata-Version: 2.4
+Name: orchestra-document-intelligence
+Version: 0.1.0
+Summary: Orchestra AI document intelligence: invoice text extraction (PDF text layer / OCR), field parsing and confidence scoring
+Requires-Python: >=3.11
+Requires-Dist: fastapi>=0.115
+Requires-Dist: uvicorn[standard]>=0.32
+Requires-Dist: python-multipart>=0.0.20
+Requires-Dist: pydantic>=2.10
+Requires-Dist: pypdf>=5.1
+Requires-Dist: pypdfium2>=4.30
+Requires-Dist: pillow>=11.0
+Requires-Dist: pytesseract>=0.3.13
+Provides-Extra: dev
+Requires-Dist: pytest>=8.3; extra == "dev"
+Requires-Dist: httpx>=0.28; extra == "dev"
+Requires-Dist: fpdf2>=2.8; extra == "dev"
+Provides-Extra: paddle
+Requires-Dist: paddleocr>=2.9; extra == "paddle"

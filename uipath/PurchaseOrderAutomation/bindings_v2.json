@@ -1,0 +1,29 @@
+{
+  "version": "2.0",
+  "resources": [
+    {
+      "activityDisplayName": "Get asset ERP_Simulation_Url",
+      "resource": "asset",
+      "id": "assetERP_Simulation_UrlFalse",
+      "value": {
+        "name": {
+          "defaultValue": "ERP_Simulation_Url",
+          "isExpression": false
+        }
+      },
+      "metadata": {}
+    },
+    {
+      "activityDisplayName": "Get credential ERP_Simulation_Credential",
+      "resource": "asset",
+      "id": "assetERP_Simulation_CredentialFalse",
+      "value": {
+        "name": {
+          "defaultValue": "ERP_Simulation_Credential",
+          "isExpression": false
+        }
+      },
+      "metadata": {}
+    }
+  ]
+}

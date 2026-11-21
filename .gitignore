@@ -1,0 +1,59 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# builds
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+coverage/
+
+# prisma generated client
+packages/database/generated/
+
+# environment
+.env
+.env.*
+!.env.example
+
+# runtime data
+storage/
+!packages/*/src/storage/
+uploads/
+.data/
+*.sqlite
+*.sqlite-*
+*.db
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# test output
+playwright-report/
+test-results/
+blob-report/
+
+# local tools
+.tools/
+
+# editors / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# UiPath local artifacts
+uipath/**/.local/
+uipath/**/.objects/
+uipath/**/.screenshots/
+uipath/**/.tmh/
+
+# Next.js generated
+apps/web/next-env.d.ts

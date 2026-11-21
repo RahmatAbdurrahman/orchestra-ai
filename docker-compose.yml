@@ -1,0 +1,196 @@
+# Orchestra AI - development / demo environment
+#
+#   docker compose up --build        -> http://localhost:3000
+#
+# UiPath: by default the stack uses the Orchestrator MOCK (uipath-mock), whose simulated
+# robot operates the ERP simulation. To use a real UiPath tenant, set the UIPATH_* variables
+# in a .env file next to this file (see docs/uipath-integration.md). The UiPath Robot itself
+# cannot run in Docker; it runs on a Windows machine that can reach the ERP simulation (port 4100).
+#
+# All credentials below are local development defaults. Override them for anything shared.
+
+name: orchestra-ai
+
+x-backend-env: &backend-env
+  NODE_ENV: production
+  DATABASE_URL: postgresql://orchestra:${POSTGRES_PASSWORD:-orchestra}@postgres:5432/orchestra?schema=public
+  REDIS_URL: redis://redis:6379
+  QUEUE_DRIVER: bullmq
+  UPLOAD_DIR: /data/uploads
+  DOCUMENT_INTELLIGENCE_URL: http://document-intelligence:8000
+  DOCUMENT_INTELLIGENCE_TOKEN: ${DOCUMENT_INTELLIGENCE_TOKEN:-dev-internal-token-change-me}
+  UIPATH_MODE: ${UIPATH_MODE:-mock}
+  UIPATH_ORCHESTRATOR_URL: ${UIPATH_ORCHESTRATOR_URL:-http://uipath-mock:4200}
+  UIPATH_IDENTITY_URL: ${UIPATH_IDENTITY_URL:-http://uipath-mock:4200/identity_/connect/token}
+  UIPATH_CLIENT_ID: ${UIPATH_CLIENT_ID:-orchestra-local}
+  UIPATH_CLIENT_SECRET: ${UIPATH_CLIENT_SECRET:-dev-uipath-secret-change-me}
+  UIPATH_SCOPES: ${UIPATH_SCOPES:-OR.Jobs OR.Execution.Read OR.Folders.Read}
+  UIPATH_FOLDER_ID: ${UIPATH_FOLDER_ID:-1}
+  UIPATH_PROCESS_NAME: ${UIPATH_PROCESS_NAME:-PurchaseOrderAutomation}
+
+x-backend: &backend
+  image: orchestra-ai/backend:dev
+  build:
+    context: .
+    dockerfile: docker/node.Dockerfile
+    target: backend
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: orchestra
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-orchestra}
+      POSTGRES_DB: orchestra
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orchestra -d orchestra"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    <<: *backend
+    restart: "no"
+    command: ["sh", "-c", "cd packages/database && ./node_modules/.bin/prisma migrate deploy && node dist/seed.js"]
+    environment:
+      <<: *backend-env
+      SEED_DEFAULT_PASSWORD: ${SEED_DEFAULT_PASSWORD:-Orchestra#2026}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  document-intelligence:
+    build:
+      context: services/document-intelligence
+    image: orchestra-ai/document-intelligence:dev
+    restart: unless-stopped
+    environment:
+      DOCUMENT_INTELLIGENCE_TOKEN: ${DOCUMENT_INTELLIGENCE_TOKEN:-dev-internal-token-change-me}
+      OCR_ENGINE: tesseract
+      OCR_LANGUAGES: eng+ind
+
+  erp-simulation:
+    <<: *backend
+    command: ["node", "--disable-warning=ExperimentalWarning", "services/erp-simulation/dist/server.js"]
+    environment:
+      ERP_PORT: 4100
+      ERP_DATABASE_PATH: /data/erp/erp-simulation.sqlite
+      ERP_USERNAME: ${ERP_USERNAME:-robot.erp}
+      ERP_PASSWORD: ${ERP_PASSWORD:-dev-erp-password-change-me}
+      ERP_API_TOKEN: ${ERP_API_TOKEN:-dev-erp-api-token-change-me}
+      ERP_SIM_ADMIN_TOKEN: ${ERP_SIM_ADMIN_TOKEN:-dev-erp-admin-change-me}
+    volumes:
+      - erpdata:/data/erp
+    ports:
+      - "4100:4100"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4100/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  # DEVELOPMENT ONLY: mock of the UiPath Orchestrator API with a simulated robot.
+  uipath-mock:
+    <<: *backend
+    command: ["node", "services/uipath-orchestrator-mock/dist/server.js"]
+    environment:
+      UIPATH_MOCK_PORT: 4200
+      UIPATH_CLIENT_ID: ${UIPATH_CLIENT_ID:-orchestra-local}
+      UIPATH_CLIENT_SECRET: ${UIPATH_CLIENT_SECRET:-dev-uipath-secret-change-me}
+      UIPATH_FOLDER_ID: ${UIPATH_FOLDER_ID:-1}
+      UIPATH_MOCK_ADMIN_TOKEN: ${UIPATH_MOCK_ADMIN_TOKEN:-dev-mock-admin-change-me}
+      ERP_SIMULATION_URL: http://erp-simulation:4100
+      ERP_USERNAME: ${ERP_USERNAME:-robot.erp}
+      ERP_PASSWORD: ${ERP_PASSWORD:-dev-erp-password-change-me}
+    ports:
+      - "127.0.0.1:4200:4200"
+    depends_on:
+      erp-simulation:
+        condition: service_healthy
+
+  api:
+    <<: *backend
+    command: ["node", "apps/api/dist/main.js"]
+    environment:
+      <<: *backend-env
+      API_PORT: 4000
+      CORS_ORIGINS: http://localhost:3000
+      COOKIE_SECURE: "false"
+      TRUST_PROXY: "true"
+      SWAGGER_ENABLED: "true"
+    volumes:
+      - uploads:/data/uploads
+    ports:
+      - "4000:4000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      document-intelligence:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  worker:
+    <<: *backend
+    command: ["node", "apps/worker/dist/main.js"]
+    environment:
+      <<: *backend-env
+      WORKER_HEALTH_PORT: 4001
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  web:
+    image: orchestra-ai/web:dev
+    build:
+      context: .
+      dockerfile: docker/node.Dockerfile
+      target: web
+    restart: unless-stopped
+    environment:
+      API_INTERNAL_URL: http://api:4000
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  redisdata:
+  uploads:
+  erpdata:

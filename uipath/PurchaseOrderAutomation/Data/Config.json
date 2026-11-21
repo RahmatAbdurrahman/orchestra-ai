@@ -1,0 +1,21 @@
+{
+  "assets": {
+    "ERP_Simulation_Url": "Text asset - base URL of SimERP reachable from the robot machine, e.g. http://localhost:4100",
+    "ERP_Simulation_Credential": "Credential asset - SimERP robot account (ERP_USERNAME / ERP_PASSWORD of the ERP simulation)"
+  },
+  "selectors": {
+    "loginUsername": "<webctrl id='username' tag='INPUT' />",
+    "loginPassword": "<webctrl id='password' tag='INPUT' />",
+    "loginButton": "<webctrl id='login-button' tag='BUTTON' />",
+    "newOrderButton": "<webctrl id='new-po-button' />",
+    "vendorCode": "#supplierCode (SELECT, option text 'CODE - Name')",
+    "fields": ["#supplierName", "#externalReference", "#integrationKey", "#currency", "#requiredDate", "#documentNumber", "#taxAmount"],
+    "itemRow": "#item-{lineNo}-description, #item-{lineNo}-quantity, #item-{lineNo}-unitPrice (rows 1..10)",
+    "submit": "#submit-po",
+    "result": ["#result-status", "#po-number", "#result-message"]
+  },
+  "timeouts": {
+    "resultScreenMs": 30000,
+    "loginCheckMs": 10000
+  }
+}

@@ -1,0 +1,52 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="CaptureScreenshot"
+  xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation"
+  xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation"
+  xmlns:sco="clr-namespace:System.Collections.ObjectModel;assembly=System.Private.CoreLib"
+  xmlns:ui="http://schemas.uipath.com/workflow/activities"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    Saves a screenshot of the robot screen on failure. The path is returned in out_ScreenshotPath and
+    stored by Orchestra AI as the attempt's screenshot reference (PRD 5.8). In production, upload it to
+    an Orchestrator storage bucket instead of keeping it on the robot machine.
+  -->
+  <x:Members>
+    <x:Property Name="in_ExecutionId" Type="InArgument(x:String)" />
+    <x:Property Name="out_ScreenshotPath" Type="OutArgument(x:String)" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <TextExpression.NamespacesForImplementation>
+    <sco:Collection x:TypeArguments="x:String">
+      <x:String>System</x:String>
+      <x:String>System.IO</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+    </sco:Collection>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <sco:Collection x:TypeArguments="AssemblyReference">
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.UiAutomation.Activities</AssemblyReference>
+    </sco:Collection>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence DisplayName="Capture screenshot">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="ui:Image" Name="screenshot" />
+    </Sequence.Variables>
+    <Assign DisplayName="Screenshot path">
+      <Assign.To>
+        <OutArgument x:TypeArguments="x:String">[out_ScreenshotPath]</OutArgument>
+      </Assign.To>
+      <Assign.Value>
+        <InArgument x:TypeArguments="x:String">[Path.Combine(Environment.CurrentDirectory, ".screenshots", in_ExecutionId + "_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".png")]</InArgument>
+      </Assign.Value>
+    </Assign>
+    <ui:CreateDirectory DisplayName="Ensure .screenshots folder" Path="[Path.GetDirectoryName(out_ScreenshotPath)]" />
+    <ui:TakeScreenshot DisplayName="Take screenshot" Screenshot="[screenshot]" />
+    <ui:SaveImage DisplayName="Save image" FileName="[out_ScreenshotPath]" Image="[screenshot]" />
+  </Sequence>
+</Activity>

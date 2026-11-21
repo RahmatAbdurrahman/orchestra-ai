@@ -1,0 +1,31 @@
+{
+  "description": "Input arguments for running Main.xaml from UiPath Studio against the ERP simulation (synthetic data). Run twice with the same in_IdempotencyKey to verify that the second run returns ALREADY_EXISTS with the same PO number.",
+  "cases": {
+    "createsPurchaseOrder": {
+      "in_ExecutionId": "studio-test-001",
+      "in_PurchaseRequestId": "00000000-0000-0000-0000-000000000001",
+      "in_RequestNumber": "PR-2026-900001",
+      "in_WorkflowId": "studio",
+      "in_CorrelationId": "studio-test",
+      "in_IdempotencyKey": "oa-po-studio-test-001",
+      "in_PurchaseOrderJson": "{\"requestNumber\":\"PR-2026-900001\",\"supplierCode\":\"SUP-001\",\"supplierName\":\"PT Sinar Jaya Abadi\",\"currency\":\"IDR\",\"requiredDate\":\"2026-12-31\",\"documentNumber\":\"INV/2026/11/0042\",\"department\":\"Operations\",\"taxAmount\":264000,\"totalAmount\":2664000,\"items\":[{\"lineNo\":1,\"description\":\"Laptop stand aluminium\",\"quantity\":2,\"unitPrice\":750000},{\"lineNo\":2,\"description\":\"Wireless keyboard and mouse set\",\"quantity\":2,\"unitPrice\":450000}]}",
+      "expected": { "out_Status": "CREATED", "out_PoNumber": "PO-YYYY-NNNNNN", "out_IdempotencyKey": "oa-po-studio-test-001" }
+    },
+    "duplicateIsPrevented": {
+      "note": "Same arguments as createsPurchaseOrder, run a second time",
+      "expected": { "out_Status": "ALREADY_EXISTS", "out_PoNumber": "same PO number as the first run" }
+    },
+    "invalidInput": {
+      "in_PurchaseOrderJson": "{\"requestNumber\":\"PR-2026-900002\",\"supplierCode\":\"\",\"supplierName\":\"PT Test\",\"currency\":\"EUR\",\"requiredDate\":\"2026-12-31\",\"documentNumber\":null,\"department\":\"Operations\",\"taxAmount\":0,\"totalAmount\":100,\"items\":[{\"lineNo\":1,\"description\":\"x\",\"quantity\":1,\"unitPrice\":100}]}",
+      "expected": { "out_Status": "BUSINESS_ERROR", "note": "SimERP rejects the unsupported currency; the job ends successfully with a business error" }
+    },
+    "applicationTimeout": {
+      "setup": "POST /api/__sim/settings {\"responseDelayMs\": 60000} on the ERP simulation (header X-Sim-Admin-Token)",
+      "expected": "Job faults (selector timeout) and Orchestra AI marks it FAILED with a retry option"
+    },
+    "applicationDown": {
+      "setup": "POST /api/__sim/settings {\"maintenanceMode\": true}",
+      "expected": "Login check fails -> system exception -> job faulted"
+    }
+  }
+}

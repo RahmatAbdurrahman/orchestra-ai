@@ -1,0 +1,501 @@
+// Orchestra AI - database schema (PostgreSQL)
+// Conventions: UUID primary keys, snake_case table/column names, timestamptz.
+
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../generated/client"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleName {
+  ADMIN
+  REQUESTER
+  APPROVER
+  OPERATOR
+  VIEWER
+}
+
+enum PurchaseRequestStatus {
+  DRAFT
+  SUBMITTED
+  PROCESSING_DOCUMENT
+  NEEDS_VERIFICATION
+  PENDING_APPROVAL
+  REJECTED
+  APPROVED
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum DocumentProcessingStatus {
+  UPLOADED
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+  VERIFIED
+}
+
+enum ApprovalDecision {
+  PENDING
+  APPROVED
+  REJECTED
+  SKIPPED
+}
+
+enum ApprovalGroup {
+  DEPARTMENT
+  FINANCE
+}
+
+enum AutomationJobStatus {
+  QUEUED
+  SUBMITTING
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum AutomationAttemptStatus {
+  SUBMITTING
+  PENDING
+  RUNNING
+  SUCCESSFUL
+  FAULTED
+  STOPPED
+  SUBMIT_FAILED
+}
+
+enum NotificationType {
+  INFO
+  APPROVAL_REQUIRED
+  REQUEST_APPROVED
+  REQUEST_REJECTED
+  DOCUMENT_PROCESSED
+  AUTOMATION_COMPLETED
+  AUTOMATION_FAILED
+}
+
+enum ActorType {
+  USER
+  SYSTEM
+  ROBOT
+}
+
+model Department {
+  id            String   @id @default(uuid()) @db.Uuid
+  code          String   @unique @db.VarChar(20)
+  name          String   @db.VarChar(120)
+  isFinance     Boolean  @default(false) @map("is_finance")
+  /// Monthly budget in base currency (simulation). NULL = unlimited.
+  monthlyBudget Decimal? @map("monthly_budget") @db.Decimal(18, 2)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  users            User[]
+  purchaseRequests PurchaseRequest[]
+  approvals        Approval[]
+
+  @@map("departments")
+}
+
+model User {
+  id                String    @id @default(uuid()) @db.Uuid
+  name              String    @db.VarChar(120)
+  /// Stored lower-case.
+  email             String    @unique @db.VarChar(254)
+  passwordHash      String    @map("password_hash")
+  departmentId      String?   @map("department_id") @db.Uuid
+  isActive          Boolean   @default(true) @map("is_active")
+  failedLoginCount  Int       @default(0) @map("failed_login_count")
+  lockedUntil       DateTime? @map("locked_until") @db.Timestamptz(3)
+  lastLoginAt       DateTime? @map("last_login_at") @db.Timestamptz(3)
+  passwordChangedAt DateTime? @map("password_changed_at") @db.Timestamptz(3)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  department        Department?       @relation(fields: [departmentId], references: [id])
+  roles             UserRole[]
+  sessions          Session[]
+  purchaseRequests  PurchaseRequest[] @relation("Requester")
+  approvalsDecided  Approval[]        @relation("ApprovalDecider")
+  documentsUploaded Document[]        @relation("DocumentUploader")
+  documentsVerified Document[]        @relation("DocumentVerifier")
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+  workflowVersions  WorkflowVersion[]
+
+  @@index([departmentId])
+  @@map("users")
+}
+
+model Role {
+  id          String     @id @default(uuid()) @db.Uuid
+  name        RoleName   @unique
+  description String     @db.VarChar(255)
+  users       UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  userId     String   @map("user_id") @db.Uuid
+  roleId     String   @map("role_id") @db.Uuid
+  assignedAt DateTime @default(now()) @map("assigned_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+/// Server-side sessions. Only a SHA-256 hash of the session token is stored.
+model Session {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  tokenHash  String    @unique @map("token_hash") @db.Char(64)
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
+  lastSeenAt DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(3)
+  ipAddress  String?   @map("ip_address") @db.VarChar(64)
+  userAgent  String?   @map("user_agent") @db.VarChar(512)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Supplier {
+  id             String   @id @default(uuid()) @db.Uuid
+  code           String   @unique @db.VarChar(30)
+  name           String   @db.VarChar(200)
+  /// Upper-case name without punctuation / legal form, used for matching OCR output.
+  normalizedName String   @unique @map("normalized_name") @db.VarChar(200)
+  taxId          String?  @map("tax_id") @db.VarChar(40)
+  email          String?  @db.VarChar(254)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  purchaseRequests PurchaseRequest[]
+
+  @@map("suppliers")
+}
+
+model Workflow {
+  id            String   @id @default(uuid()) @db.Uuid
+  key           String   @unique @db.VarChar(80)
+  name          String   @db.VarChar(120)
+  description   String?
+  workflowType  String   @map("workflow_type") @db.VarChar(40)
+  /// Validated against workflowConfigurationSchema (@orchestra/domain).
+  configuration Json
+  isActive      Boolean  @default(true) @map("is_active")
+  version       Int      @default(1)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  versions         WorkflowVersion[]
+  purchaseRequests PurchaseRequest[]
+  automationJobs   AutomationJob[]
+
+  @@index([workflowType, isActive])
+  @@map("workflows")
+}
+
+/// Immutable snapshot of every workflow configuration version.
+model WorkflowVersion {
+  id            String   @id @default(uuid()) @db.Uuid
+  workflowId    String   @map("workflow_id") @db.Uuid
+  version       Int
+  configuration Json
+  changeNote    String?  @map("change_note")
+  createdById   String?  @map("created_by_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  workflow  Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  createdBy User?    @relation(fields: [createdById], references: [id])
+
+  @@unique([workflowId, version])
+  @@map("workflow_versions")
+}
+
+model PurchaseRequest {
+  id              String                @id @default(uuid()) @db.Uuid
+  requestNumber   String                @unique @map("request_number") @db.VarChar(30)
+  title           String                @db.VarChar(200)
+  description     String?
+  requesterId     String                @map("requester_id") @db.Uuid
+  departmentId    String                @map("department_id") @db.Uuid
+  workflowId      String                @map("workflow_id") @db.Uuid
+  workflowVersion Int                   @map("workflow_version")
+  supplierId      String?               @map("supplier_id") @db.Uuid
+  supplierName    String?               @map("supplier_name") @db.VarChar(200)
+  /// Supplier invoice / quotation number taken from the supporting document.
+  documentNumber  String?               @map("document_number") @db.VarChar(80)
+  documentDate    DateTime?             @map("document_date") @db.Date
+  currency        String                @default("IDR") @db.Char(3)
+  subtotalAmount  Decimal               @default(0) @map("subtotal_amount") @db.Decimal(18, 2)
+  taxAmount       Decimal               @default(0) @map("tax_amount") @db.Decimal(18, 2)
+  totalAmount     Decimal               @default(0) @map("total_amount") @db.Decimal(18, 2)
+  /// Total converted to the workflow base currency at verification time.
+  totalAmountBase Decimal?              @map("total_amount_base") @db.Decimal(18, 2)
+  requiredDate    DateTime?             @map("required_date") @db.Date
+  status          PurchaseRequestStatus @default(DRAFT)
+  /// Latest reason given for a rejection, cancellation or failure.
+  statusReason    String?               @map("status_reason")
+  ruleEvaluation  Json?                 @map("rule_evaluation")
+  approvalRoute   ApprovalGroup[]       @default([]) @map("approval_route")
+  poNumber        String?               @map("po_number") @db.VarChar(50)
+  submittedAt     DateTime?             @map("submitted_at") @db.Timestamptz(3)
+  approvedAt      DateTime?             @map("approved_at") @db.Timestamptz(3)
+  completedAt     DateTime?             @map("completed_at") @db.Timestamptz(3)
+  cancelledAt     DateTime?             @map("cancelled_at") @db.Timestamptz(3)
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  requester     User                  @relation("Requester", fields: [requesterId], references: [id])
+  department    Department            @relation(fields: [departmentId], references: [id])
+  workflow      Workflow              @relation(fields: [workflowId], references: [id])
+  supplier      Supplier?             @relation(fields: [supplierId], references: [id])
+  items         PurchaseRequestItem[]
+  documents     Document[]
+  approvals     Approval[]
+  automationJob AutomationJob?
+
+  @@index([status])
+  @@index([requesterId])
+  @@index([departmentId])
+  @@index([createdAt])
+  @@index([supplierId, documentNumber])
+  @@map("purchase_requests")
+}
+
+model PurchaseRequestItem {
+  id                String  @id @default(uuid()) @db.Uuid
+  purchaseRequestId String  @map("purchase_request_id") @db.Uuid
+  lineNo            Int     @map("line_no")
+  description       String  @db.VarChar(500)
+  quantity          Int
+  unit              String? @db.VarChar(20)
+  unitPrice         Decimal @map("unit_price") @db.Decimal(18, 2)
+  lineTotal         Decimal @map("line_total") @db.Decimal(18, 2)
+
+  purchaseRequest PurchaseRequest @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
+
+  @@unique([purchaseRequestId, lineNo])
+  @@map("purchase_request_items")
+}
+
+model Document {
+  id                String                   @id @default(uuid()) @db.Uuid
+  purchaseRequestId String                   @map("purchase_request_id") @db.Uuid
+  fileName          String                   @map("file_name") @db.VarChar(255)
+  /// Relative path inside the upload storage root. Never derived from user input.
+  storagePath       String                   @map("storage_path") @db.VarChar(500)
+  mimeType          String                   @map("mime_type") @db.VarChar(100)
+  sizeBytes         Int                      @map("size_bytes")
+  sha256            String                   @db.Char(64)
+  processingStatus  DocumentProcessingStatus @default(UPLOADED) @map("processing_status")
+  /// Incremented every time processing is requested; part of the queue job id.
+  processingRun     Int                      @default(0) @map("processing_run")
+  extractedData     Json?                    @map("extracted_data")
+  confidenceScore   Decimal?                 @map("confidence_score") @db.Decimal(5, 4)
+  processingError   String?                  @map("processing_error")
+  processedAt       DateTime?                @map("processed_at") @db.Timestamptz(3)
+  verifiedData      Json?                    @map("verified_data")
+  verifiedAt        DateTime?                @map("verified_at") @db.Timestamptz(3)
+  verifiedById      String?                  @map("verified_by_id") @db.Uuid
+  uploadedById      String                   @map("uploaded_by_id") @db.Uuid
+  createdAt         DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  purchaseRequest PurchaseRequest @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
+  uploadedBy      User            @relation("DocumentUploader", fields: [uploadedById], references: [id])
+  verifiedBy      User?           @relation("DocumentVerifier", fields: [verifiedById], references: [id])
+
+  @@index([purchaseRequestId])
+  @@index([processingStatus])
+  @@map("documents")
+}
+
+model Approval {
+  id                String           @id @default(uuid()) @db.Uuid
+  purchaseRequestId String           @map("purchase_request_id") @db.Uuid
+  approvalLevel     Int              @map("approval_level")
+  approverGroup     ApprovalGroup    @map("approver_group")
+  /// Department whose approvers are eligible (requester department, or the finance department).
+  departmentId      String?          @map("department_id") @db.Uuid
+  /// The user who made the decision.
+  approverId        String?          @map("approver_id") @db.Uuid
+  decision          ApprovalDecision @default(PENDING)
+  comments          String?
+  /// Set when this level becomes actionable (levels are sequential).
+  activatedAt       DateTime?        @map("activated_at") @db.Timestamptz(3)
+  decidedAt         DateTime?        @map("decided_at") @db.Timestamptz(3)
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  purchaseRequest PurchaseRequest @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
+  department      Department?     @relation(fields: [departmentId], references: [id])
+  approver        User?           @relation("ApprovalDecider", fields: [approverId], references: [id])
+
+  @@unique([purchaseRequestId, approvalLevel])
+  @@index([decision, approverGroup, departmentId])
+  @@index([approverId])
+  @@map("approvals")
+}
+
+/// One automation job per purchase request ("create the purchase order").
+/// The unique purchase_request_id and idempotency_key prevent duplicate executions.
+model AutomationJob {
+  id                   String              @id @default(uuid()) @db.Uuid
+  purchaseRequestId    String              @unique @map("purchase_request_id") @db.Uuid
+  workflowId           String              @map("workflow_id") @db.Uuid
+  processName          String              @map("process_name") @db.VarChar(200)
+  idempotencyKey       String              @unique @map("idempotency_key") @db.VarChar(200)
+  correlationId        String              @map("correlation_id") @db.VarChar(64)
+  status               AutomationJobStatus @default(QUEUED)
+  attemptCount         Int                 @default(0) @map("attempt_count")
+  maxAutoAttempts      Int                 @map("max_auto_attempts")
+  maxTotalAttempts     Int                 @map("max_total_attempts")
+  pendingTimeoutSec    Int                 @map("pending_timeout_sec")
+  executionTimeoutSec  Int                 @map("execution_timeout_sec")
+  uipathJobId          String?             @map("uipath_job_id") @db.VarChar(64)
+  uipathJobKey         String?             @map("uipath_job_key") @db.VarChar(64)
+  /// Validated payload sent to the robot (snapshot at dispatch time).
+  inputPayload         Json                @map("input_payload")
+  outputData           Json?               @map("output_data")
+  poNumber             String?             @map("po_number") @db.VarChar(50)
+  errorCode            String?             @map("error_code") @db.VarChar(60)
+  errorMessage         String?             @map("error_message")
+  requiresIntervention Boolean             @default(false) @map("requires_intervention")
+  nextAttemptAt        DateTime?           @map("next_attempt_at") @db.Timestamptz(3)
+  queuedAt             DateTime            @default(now()) @map("queued_at") @db.Timestamptz(3)
+  startedAt            DateTime?           @map("started_at") @db.Timestamptz(3)
+  completedAt          DateTime?           @map("completed_at") @db.Timestamptz(3)
+  lastPolledAt         DateTime?           @map("last_polled_at") @db.Timestamptz(3)
+  createdAt            DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  purchaseRequest PurchaseRequest     @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
+  workflow        Workflow            @relation(fields: [workflowId], references: [id])
+  attempts        AutomationAttempt[]
+  logs            AutomationLog[]
+
+  @@index([status])
+  @@index([uipathJobId])
+  @@index([createdAt])
+  @@map("automation_jobs")
+}
+
+/// One UiPath job submission. `reference` is sent to Orchestrator so an
+/// ambiguous submission can be looked up instead of being re-submitted.
+model AutomationAttempt {
+  id              String                  @id @default(uuid()) @db.Uuid
+  automationJobId String                  @map("automation_job_id") @db.Uuid
+  attemptNo       Int                     @map("attempt_no")
+  reference       String                  @unique @db.VarChar(128)
+  status          AutomationAttemptStatus @default(SUBMITTING)
+  triggeredBy     ActorType               @map("triggered_by")
+  triggeredById   String?                 @map("triggered_by_id") @db.Uuid
+  uipathJobId     String?                 @map("uipath_job_id") @db.VarChar(64)
+  uipathJobKey    String?                 @map("uipath_job_key") @db.VarChar(64)
+  uipathState     String?                 @map("uipath_state") @db.VarChar(30)
+  submittedAt     DateTime?               @map("submitted_at") @db.Timestamptz(3)
+  startedAt       DateTime?               @map("started_at") @db.Timestamptz(3)
+  endedAt         DateTime?               @map("ended_at") @db.Timestamptz(3)
+  pollCount       Int                     @default(0) @map("poll_count")
+  lastPolledAt    DateTime?               @map("last_polled_at") @db.Timestamptz(3)
+  errorCode       String?                 @map("error_code") @db.VarChar(60)
+  errorMessage    String?                 @map("error_message")
+  retryable       Boolean?
+  outputArguments Json?                   @map("output_arguments")
+  screenshotRef   String?                 @map("screenshot_ref") @db.VarChar(500)
+  createdAt       DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime                @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  automationJob AutomationJob @relation(fields: [automationJobId], references: [id], onDelete: Cascade)
+
+  @@unique([automationJobId, attemptNo])
+  @@index([status])
+  @@index([uipathJobId])
+  @@map("automation_attempts")
+}
+
+model AutomationLog {
+  id              String   @id @default(uuid()) @db.Uuid
+  automationJobId String   @map("automation_job_id") @db.Uuid
+  attemptNo       Int?     @map("attempt_no")
+  level           String   @db.VarChar(10)
+  eventType       String   @map("event_type") @db.VarChar(60)
+  message         String
+  metadata        Json?
+  correlationId   String?  @map("correlation_id") @db.VarChar(64)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  automationJob AutomationJob @relation(fields: [automationJobId], references: [id], onDelete: Cascade)
+
+  @@index([automationJobId, createdAt])
+  @@map("automation_logs")
+}
+
+/// Append-only audit trail. UPDATE and DELETE are rejected by a database trigger
+/// (see migration 0001_init) in addition to the application only ever inserting.
+model AuditLog {
+  id                String    @id @default(uuid()) @db.Uuid
+  actorId           String?   @map("actor_id") @db.Uuid
+  actorType         ActorType @default(USER) @map("actor_type")
+  action            String    @db.VarChar(80)
+  entityType        String    @map("entity_type") @db.VarChar(60)
+  entityId          String    @map("entity_id") @db.VarChar(64)
+  /// Purchase request the event belongs to (if any); powers timelines and scoped views.
+  purchaseRequestId String?   @map("purchase_request_id") @db.Uuid
+  oldValue          Json?     @map("old_value")
+  newValue          Json?     @map("new_value")
+  metadata          Json?
+  ipAddress         String?   @map("ip_address") @db.VarChar(64)
+  userAgent         String?   @map("user_agent") @db.VarChar(512)
+  correlationId     String?   @map("correlation_id") @db.VarChar(64)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([entityType, entityId])
+  @@index([purchaseRequestId])
+  @@index([actorId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  type      NotificationType @default(INFO)
+  title     String           @db.VarChar(200)
+  message   String
+  link      String?          @db.VarChar(300)
+  isRead    Boolean          @default(false) @map("is_read")
+  readAt    DateTime?        @map("read_at") @db.Timestamptz(3)
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt])
+  @@map("notifications")
+}

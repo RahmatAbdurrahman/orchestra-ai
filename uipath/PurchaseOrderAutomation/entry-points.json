@@ -1,0 +1,74 @@
+{
+  "$schema": "https://cloud.uipath.com/draft/2024-12/entry-point",
+  "entryPoints": [
+    {
+      "filePath": "Main.xaml",
+      "uniqueId": "0a6d6c39-3d1e-4cb5-8a3f-7a0c8a3b5d11",
+      "type": "process",
+      "input": {
+        "type": "object",
+        "properties": {
+          "in_ExecutionId": {
+            "type": "string",
+            "x-default-expression": "\"studio-test-001\"",
+            "default": "studio-test-001"
+          },
+          "in_PurchaseRequestId": {
+            "type": "string",
+            "x-default-expression": "\"00000000-0000-0000-0000-000000000001\"",
+            "default": "00000000-0000-0000-0000-000000000001"
+          },
+          "in_RequestNumber": {
+            "type": "string",
+            "x-default-expression": "\"PR-2026-900001\"",
+            "default": "PR-2026-900001"
+          },
+          "in_WorkflowId": {
+            "type": "string",
+            "x-default-expression": "\"studio\"",
+            "default": "studio"
+          },
+          "in_CorrelationId": {
+            "type": "string",
+            "x-default-expression": "\"studio-test\"",
+            "default": "studio-test"
+          },
+          "in_IdempotencyKey": {
+            "type": "string",
+            "x-default-expression": "\"oa-po-studio-test-001\"",
+            "default": "oa-po-studio-test-001"
+          },
+          "in_PurchaseOrderJson": {
+            "type": "string",
+            "x-default-expression": "\"{\"\"requestNumber\"\":\"\"PR-2026-900001\"\",\"\"supplierCode\"\":\"\"SUP-001\"\",\"\"supplierName\"\":\"\"PT Sinar Jaya Abadi\"\",\"\"currency\"\":\"\"IDR\"\",\"\"requiredDate\"\":\"\"2026-12-31\"\",\"\"documentNumber\"\":\"\"INV/2026/11/0042\"\",\"\"department\"\":\"\"Operations\"\",\"\"taxAmount\"\":264000,\"\"totalAmount\"\":2664000,\"\"items\"\":[{\"\"lineNo\"\":1,\"\"description\"\":\"\"Laptop stand aluminium\"\",\"\"quantity\"\":2,\"\"unitPrice\"\":750000},{\"\"lineNo\"\":2,\"\"description\"\":\"\"Wireless keyboard and mouse set\"\",\"\"quantity\"\":2,\"\"unitPrice\"\":450000}]}\"",
+            "default": "{\"requestNumber\":\"PR-2026-900001\",\"supplierCode\":\"SUP-001\",\"supplierName\":\"PT Sinar Jaya Abadi\",\"currency\":\"IDR\",\"requiredDate\":\"2026-12-31\",\"documentNumber\":\"INV/2026/11/0042\",\"department\":\"Operations\",\"taxAmount\":264000,\"totalAmount\":2664000,\"items\":[{\"lineNo\":1,\"description\":\"Laptop stand aluminium\",\"quantity\":2,\"unitPrice\":750000},{\"lineNo\":2,\"description\":\"Wireless keyboard and mouse set\",\"quantity\":2,\"unitPrice\":450000}]}"
+          }
+        },
+        "required": []
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "out_Status": {
+            "type": "string"
+          },
+          "out_PoNumber": {
+            "type": "string"
+          },
+          "out_IdempotencyKey": {
+            "type": "string"
+          },
+          "out_ErpReference": {
+            "type": "string"
+          },
+          "out_Message": {
+            "type": "string"
+          },
+          "out_ScreenshotPath": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ]
+}
