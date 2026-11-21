@@ -42,7 +42,7 @@ Environment:
 | `UIPATH_SCOPES` | `OR.Jobs OR.Execution.Read OR.Folders.Read` |
 | `UIPATH_FOLDER_ID`, `UIPATH_PROCESS_NAME` | as in the local `.env` |
 | `UIPATH_REQUEST_TIMEOUT_MS` | `30000` |
-| `CORS_ORIGINS` | the Vercel URL, e.g. `https://orchestra-ai.vercel.app` |
+| `CORS_ORIGINS` | optional; only browsers calling the API directly need to be listed |
 | `COOKIE_SECURE` | `true` |
 | `DEMO_LOGIN_ENABLED` | `true` or `false` |
 
@@ -52,7 +52,9 @@ Environment:
 2. Set `API_INTERNAL_URL` to the Render URL, e.g. `https://orchestra-ai-api.onrender.com`.
    Leave `API_INTERNAL_AUTH_TOKEN` unset. It is only needed when the API sits behind an
    authenticating gateway.
-3. Deploy. Then put the final Vercel URL in Render's `CORS_ORIGINS`. Render redeploys on change.
+3. Deploy. Every Vercel hostname works (production domain, team alias, per-deployment URLs):
+   the proxy checks that a state-changing request comes from the host it was sent to, and calls
+   the API without forwarding the browser `Origin`.
 
 The browser only talks to Vercel. The Vercel server proxies `/api/v1/*` to Render, so the session
 cookie stays first-party on the Vercel domain.
