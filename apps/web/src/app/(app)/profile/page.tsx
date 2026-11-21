@@ -31,11 +31,22 @@ export default function ProfilePage() {
 
   return (
     <>
-      <PageHeader title="Profile" description={user.email} />
-      <div className="grid gap-4 lg:grid-cols-2">
+      <PageHeader title="Profile" description="Your account, roles and sign-in security." />
+      <div className="stagger grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle>Account</CardTitle>
+          <CardHeader className="flex-row items-center gap-4">
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary/12 text-base font-semibold text-primary ring-1 ring-primary/20 dark:text-info-foreground" aria-hidden>
+              {user.name
+                .split(' ')
+                .map((part) => part[0])
+                .slice(0, 2)
+                .join('')
+                .toUpperCase()}
+            </span>
+            <div className="min-w-0 space-y-1">
+              <CardTitle className="truncate text-base">{user.name}</CardTitle>
+              <CardDescription className="truncate">{user.email}</CardDescription>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">

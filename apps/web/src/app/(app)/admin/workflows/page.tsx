@@ -2,24 +2,25 @@
 
 import { APPROVAL_GROUP_LABELS, Permission, safeParseWorkflowConfiguration, type WorkflowConfiguration } from '@orchestra/domain';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Save } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { AlertTriangle, Loader2, Lock, Save } from 'lucide-react';
+import { useEffect, useId, useState } from 'react';
 import { toast } from 'sonner';
 import { EmptyState, ErrorBlock, KeyValue, LoadingBlock, PageHeader } from '@/components/page';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/overlays';
-import { Alert, Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, NativeSelect, Textarea } from '@/components/ui/primitives';
+import { Alert, Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, FieldMessage, Input, Label, NativeSelect, Textarea } from '@/components/ui/primitives';
 import { api, errorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatDateTime, formatMoney } from '@/lib/format';
 import type { WorkflowView } from '@/lib/types';
 
-function NumberField({ label, value, onChange, step = 1, hint }: { label: string; value: number; onChange: (value: number) => void; step?: number; hint?: string }) {
+function NumberField({ label, value, onChange, step = 1, hint, disabled }: { label: string; value: number; onChange: (value: number) => void; step?: number; hint?: string; disabled?: boolean }) {
+  const id = useId();
   return (
     <div className="space-y-1.5">
-      <Label>{label}</Label>
-      <Input type="number" step={step} value={Number.isFinite(value) ? value : ''} onChange={(event) => onChange(Number(event.target.value))} />
-      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+      <Label htmlFor={id}>{label}</Label>
+      <Input id={id} type="number" inputMode="decimal" step={step} disabled={disabled} className="tabular-nums" value={Number.isFinite(value) ? value : ''} onChange={(event) => onChange(Number(event.target.value))} />
+      {hint ? <FieldMessage tone="hint">{hint}</FieldMessage> : null}
     </div>
   );
 }
@@ -61,8 +62,16 @@ function WorkflowEditor({ workflow }: { workflow: WorkflowView }) {
 
   return (
     <div className="space-y-4">
+      {!editable ? (
+        <Alert tone="info">
+          <Lock className="size-4" />
+          <div>
+            <span className="font-medium">Read-only view.</span> Your role can review this workflow; only workflow managers can change it.
+          </div>
+        </Alert>
+      ) : null}
       <Card>
-        <CardHeader className="flex-row items-start justify-between gap-3">
+        <CardHeader className="flex-row flex-wrap items-start justify-between gap-3">
           <div>
             <CardTitle>{workflow.name}</CardTitle>
             <CardDescription>{workflow.description}</CardDescription>
@@ -93,11 +102,13 @@ function WorkflowEditor({ workflow }: { workflow: WorkflowView }) {
           </CardHeader>
           <CardContent className="space-y-3">
             {thresholds.map((threshold, index) => (
-              <div key={index} className="flex flex-wrap items-center gap-3 rounded-lg border p-3 text-sm">
-                <span className="w-28 text-muted-foreground">{index === thresholds.length - 1 ? 'Above' : 'Up to'}</span>
+              <div key={index} className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/30 p-3 text-sm">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary dark:text-info-foreground">{index + 1}</span>
+                <span className="w-20 text-muted-foreground">{index === thresholds.length - 1 ? 'Above' : 'Up to'}</span>
                 {threshold.maxAmount !== null ? (
                   <Input
-                    className="w-40"
+                    className="w-40 tabular-nums"
+                    aria-label={`Level ${index + 1} maximum amount`}
                     type="number"
                     disabled={!editable}
                     value={threshold.maxAmount}
@@ -110,7 +121,12 @@ function WorkflowEditor({ workflow }: { workflow: WorkflowView }) {
                 ) : (
                   <span className="w-40 tabular-nums">{formatMoney(thresholds[index - 1]?.maxAmount ?? 0, config.rules.baseCurrency)}</span>
                 )}
-                <span>→ {threshold.groups.map((group) => APPROVAL_GROUP_LABELS[group]).join(' + ')}</span>
+                <span className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-subtle-foreground" aria-hidden>→</span>
+                  {threshold.groups.map((group) => (
+                    <Badge key={group} tone="primary">{APPROVAL_GROUP_LABELS[group]}</Badge>
+                  ))}
+                </span>
               </div>
             ))}
             <label className="flex items-center gap-2 text-sm">
@@ -129,18 +145,18 @@ function WorkflowEditor({ workflow }: { workflow: WorkflowView }) {
             <CardTitle>Business rules</CardTitle>
             <CardDescription>Validation applied after document verification</CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
-            <NumberField label="Minimum amount" value={config.rules.minTransactionAmount} onChange={(value) => update({ ...config, rules: { ...config.rules, minTransactionAmount: value } })} />
-            <NumberField label="Maximum amount" value={config.rules.maxTransactionAmount} onChange={(value) => update({ ...config, rules: { ...config.rules, maxTransactionAmount: value } })} />
-            <NumberField label="Max quantity per line" value={config.rules.maxQuantityPerItem} onChange={(value) => update({ ...config, rules: { ...config.rules, maxQuantityPerItem: value } })} />
-            <NumberField label="Duplicate lookback (days)" value={config.rules.duplicateLookbackDays} onChange={(value) => update({ ...config, rules: { ...config.rules, duplicateLookbackDays: value } })} />
-            <NumberField label="USD → IDR rate (simulation)" value={config.rules.fxRatesToBase.USD ?? 0} onChange={(value) => update({ ...config, rules: { ...config.rules, fxRatesToBase: { ...config.rules.fxRatesToBase, USD: value } } })} />
-            <NumberField label="Review threshold" step={0.01} value={config.document.confidenceThreshold} onChange={(value) => update({ ...config, document: { ...config.document, confidenceThreshold: value } })} hint="0–1; lower confidence needs confirmation" />
-            <label className="col-span-2 flex items-center gap-2 text-sm">
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            <NumberField disabled={!editable} label="Minimum amount" value={config.rules.minTransactionAmount} onChange={(value) => update({ ...config, rules: { ...config.rules, minTransactionAmount: value } })} />
+            <NumberField disabled={!editable} label="Maximum amount" value={config.rules.maxTransactionAmount} onChange={(value) => update({ ...config, rules: { ...config.rules, maxTransactionAmount: value } })} />
+            <NumberField disabled={!editable} label="Max quantity per line" value={config.rules.maxQuantityPerItem} onChange={(value) => update({ ...config, rules: { ...config.rules, maxQuantityPerItem: value } })} />
+            <NumberField disabled={!editable} label="Duplicate lookback (days)" value={config.rules.duplicateLookbackDays} onChange={(value) => update({ ...config, rules: { ...config.rules, duplicateLookbackDays: value } })} />
+            <NumberField disabled={!editable} label="USD → IDR rate (simulation)" value={config.rules.fxRatesToBase.USD ?? 0} onChange={(value) => update({ ...config, rules: { ...config.rules, fxRatesToBase: { ...config.rules.fxRatesToBase, USD: value } } })} />
+            <NumberField disabled={!editable} label="Review threshold" step={0.01} value={config.document.confidenceThreshold} onChange={(value) => update({ ...config, document: { ...config.document, confidenceThreshold: value } })} hint="0–1; lower confidence needs confirmation" />
+            <label className="flex items-center gap-2 text-sm sm:col-span-2">
               <Checkbox disabled={!editable} checked={config.rules.requireRegisteredSupplier} onCheckedChange={(checked) => update({ ...config, rules: { ...config.rules, requireRegisteredSupplier: checked === true } })} />
               Supplier must be registered and active
             </label>
-            <label className="col-span-2 flex items-center gap-2 text-sm">
+            <label className="flex items-center gap-2 text-sm sm:col-span-2">
               <Checkbox disabled={!editable} checked={config.rules.enforceDepartmentBudget} onCheckedChange={(checked) => update({ ...config, rules: { ...config.rules, enforceDepartmentBudget: checked === true } })} />
               Enforce the monthly department budget
             </label>
@@ -152,26 +168,26 @@ function WorkflowEditor({ workflow }: { workflow: WorkflowView }) {
             <CardTitle>UiPath automation</CardTitle>
             <CardDescription>Process executed after the final approval</CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
-            <div className="col-span-2 space-y-1.5">
-              <Label>Process (release) name</Label>
-              <Input disabled={!editable} value={config.automation.processName} onChange={(event) => update({ ...config, automation: { ...config.automation, processName: event.target.value } })} />
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="process-name">Process (release) name</Label>
+              <Input id="process-name" className="font-mono text-[13px]" disabled={!editable} value={config.automation.processName} onChange={(event) => update({ ...config, automation: { ...config.automation, processName: event.target.value } })} />
             </div>
             <div className="space-y-1.5">
-              <Label>Dispatch</Label>
-              <NativeSelect disabled={!editable} value={config.automation.dispatchMode} onChange={(event) => update({ ...config, automation: { ...config.automation, dispatchMode: event.target.value as 'AUTOMATIC' | 'MANUAL' } })}>
+              <Label htmlFor="dispatch-mode">Dispatch</Label>
+              <NativeSelect id="dispatch-mode" disabled={!editable} value={config.automation.dispatchMode} onChange={(event) => update({ ...config, automation: { ...config.automation, dispatchMode: event.target.value as 'AUTOMATIC' | 'MANUAL' } })}>
                 <option value="AUTOMATIC">Automatic on approval</option>
                 <option value="MANUAL">Manual by an operator</option>
               </NativeSelect>
             </div>
-            <label className="mt-6 flex items-center gap-2 text-sm">
+            <label className="flex items-center gap-2 text-sm sm:mt-6">
               <Checkbox disabled={!editable} checked={config.automation.enabled} onCheckedChange={(checked) => update({ ...config, automation: { ...config.automation, enabled: checked === true } })} />
               Automation enabled
             </label>
-            <NumberField label="Automatic attempts" value={config.automation.maxAutoAttempts} onChange={(value) => update({ ...config, automation: { ...config.automation, maxAutoAttempts: value } })} hint="Before the robot starts" />
-            <NumberField label="Total attempts (incl. retries)" value={config.automation.maxTotalAttempts} onChange={(value) => update({ ...config, automation: { ...config.automation, maxTotalAttempts: value } })} />
-            <NumberField label="No-robot timeout (min)" value={config.automation.pendingTimeoutMinutes} onChange={(value) => update({ ...config, automation: { ...config.automation, pendingTimeoutMinutes: value } })} />
-            <NumberField label="Execution timeout (min)" value={config.automation.executionTimeoutMinutes} onChange={(value) => update({ ...config, automation: { ...config.automation, executionTimeoutMinutes: value } })} />
+            <NumberField disabled={!editable} label="Automatic attempts" value={config.automation.maxAutoAttempts} onChange={(value) => update({ ...config, automation: { ...config.automation, maxAutoAttempts: value } })} hint="Before the robot starts" />
+            <NumberField disabled={!editable} label="Total attempts (incl. retries)" value={config.automation.maxTotalAttempts} onChange={(value) => update({ ...config, automation: { ...config.automation, maxTotalAttempts: value } })} />
+            <NumberField disabled={!editable} label="No-robot timeout (min)" value={config.automation.pendingTimeoutMinutes} onChange={(value) => update({ ...config, automation: { ...config.automation, pendingTimeoutMinutes: value } })} />
+            <NumberField disabled={!editable} label="Execution timeout (min)" value={config.automation.executionTimeoutMinutes} onChange={(value) => update({ ...config, automation: { ...config.automation, executionTimeoutMinutes: value } })} />
           </CardContent>
         </Card>
 
@@ -200,7 +216,8 @@ function WorkflowEditor({ workflow }: { workflow: WorkflowView }) {
 
       {!validation.success ? (
         <Alert tone="danger">
-          <ul className="list-disc pl-4">
+          <AlertTriangle className="size-4" />
+          <ul className="list-inside list-disc space-y-0.5">
             {validation.error.issues.slice(0, 6).map((issue) => (
               <li key={`${issue.path.join('.')}${issue.message}`}>{issue.path.join('.')}: {issue.message}</li>
             ))}
@@ -227,9 +244,10 @@ function WorkflowEditor({ workflow }: { workflow: WorkflowView }) {
           <CardTitle>Version history</CardTitle>
         </CardHeader>
         <CardContent>
+          {detail.isLoading ? <LoadingBlock rows={3} /> : null}
           <ol className="space-y-2 text-sm">
             {detail.data?.versions?.map((version) => (
-              <li key={version.id} className="flex justify-between gap-3 border-b pb-2 last:border-0">
+              <li key={version.id} className="flex flex-col justify-between gap-1 border-b pb-2 last:border-0 sm:flex-row sm:gap-3">
                 <span>
                   <Badge tone="neutral">v{version.version}</Badge> {version.changeNote ?? '—'}
                 </span>

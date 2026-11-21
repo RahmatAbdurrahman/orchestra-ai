@@ -4,13 +4,18 @@ import { Permission, ROLE_LABELS } from '@orchestra/domain';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Bell,
+  BellOff,
   Bot,
+  ChevronDown,
+  ChevronRight,
   CheckSquare,
   FileText,
   LayoutDashboard,
   LogOut,
   Menu,
   Moon,
+  PanelLeftClose,
+  PanelLeftOpen,
   PlugZap,
   ScrollText,
   Settings2,
@@ -23,7 +28,7 @@ import {
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button, IconButton } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,7 +36,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  Tooltip,
+  TooltipProvider,
 } from '@/components/ui/overlays';
+import { Badge } from '@/components/ui/primitives';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatRelative } from '@/lib/format';
@@ -82,7 +90,11 @@ function useTheme() {
   useEffect(() => setDark(document.documentElement.classList.contains('dark')), []);
   const toggle = () => {
     const next = !dark;
-    document.documentElement.classList.toggle('dark', next);
+    const root = document.documentElement;
+    // Cross-fade colours for one transition, then remove so normal interactions are unaffected.
+    root.classList.add('theme-transition');
+    root.classList.toggle('dark', next);
+    window.setTimeout(() => root.classList.remove('theme-transition'), 250);
     try {
       localStorage.setItem('orchestra-theme', next ? 'dark' : 'light');
     } catch {
@@ -91,6 +103,52 @@ function useTheme() {
     setDark(next);
   };
   return { dark, toggle };
+}
+
+const SIDEBAR_KEY = 'orchestra-sidebar-collapsed';
+
+function useCollapsed() {
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    try {
+      setCollapsed(localStorage.getItem(SIDEBAR_KEY) === '1');
+    } catch {
+      /* storage unavailable */
+    }
+  }, []);
+  const toggle = () =>
+    setCollapsed((current) => {
+      try {
+        localStorage.setItem(SIDEBAR_KEY, current ? '0' : '1');
+      } catch {
+        /* storage unavailable */
+      }
+      return !current;
+    });
+  return { collapsed, toggle };
+}
+
+/** Title shown in the top bar for the current route (presentation only). */
+function pageContext(pathname: string): { title: string; parent?: { href: string; label: string } } {
+  if (pathname === '/requests/new') return { title: 'New request', parent: { href: '/requests', label: 'Purchase requests' } };
+  if (/^\/requests\/[^/]+$/.test(pathname)) return { title: 'Request detail', parent: { href: '/requests', label: 'Purchase requests' } };
+  if (/^\/automation\/[^/]+$/.test(pathname)) return { title: 'Job detail', parent: { href: '/automation', label: 'Automation jobs' } };
+  if (pathname === '/profile') return { title: 'Profile' };
+  if (pathname === '/notifications') return { title: 'Notifications' };
+  for (const group of NAV) {
+    const item = group.items.find((entry) => pathname === entry.href || pathname.startsWith(`${entry.href}/`));
+    if (item) return { title: item.label };
+  }
+  return { title: 'Orchestra AI' };
+}
+
+function initials(name: string): string {
+  return name
+    .split(' ')
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
 }
 
 function NotificationsMenu() {
@@ -119,149 +177,311 @@ function NotificationsMenu() {
         <Button variant="ghost" size="icon" aria-label={`Notifications (${unread} unread)`} className="relative">
           <Bell />
           {unread > 0 ? (
-            <span className="absolute top-1 right-1 flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-white">
+            <span className="absolute top-1 right-1 flex h-4 min-w-4 animate-in items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-white ring-2 ring-background zoom-in-50 duration-200">
               {unread > 9 ? '9+' : unread}
             </span>
           ) : null}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80">
-        <div className="flex items-center justify-between px-2 py-1.5">
-          <span className="text-sm font-medium">Notifications</span>
+      <DropdownMenuContent align="end" className="w-[min(22rem,calc(100vw-1.5rem))] p-0">
+        <div className="flex items-center justify-between px-3 py-2.5">
+          <span className="text-sm font-semibold">Notifications</span>
           {unread > 0 ? (
-            <button className="text-xs text-primary hover:underline" onClick={() => markAll.mutate()}>
+            <button
+              className="rounded-sm text-xs font-medium text-primary hover:underline focus-visible:shadow-[var(--focus-ring)] focus-visible:outline-none"
+              onClick={() => markAll.mutate()}
+            >
               Mark all read
             </button>
           ) : null}
         </div>
-        <DropdownMenuSeparator />
-        {data?.data.length ? (
-          data.data.map((notification) => (
-            <DropdownMenuItem key={notification.id} onSelect={() => void open(notification)} className="flex-col items-start gap-0.5">
-              <span className={cn('text-sm', !notification.isRead && 'font-semibold')}>{notification.title}</span>
-              <span className="line-clamp-2 text-xs text-muted-foreground">{notification.message}</span>
-              <span className="text-[11px] text-muted-foreground">{formatRelative(notification.createdAt)}</span>
-            </DropdownMenuItem>
-          ))
-        ) : (
-          <p className="px-2 py-6 text-center text-sm text-muted-foreground">No notifications</p>
-        )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/notifications" className="justify-center text-sm">
-            View all
-          </Link>
-        </DropdownMenuItem>
+        <DropdownMenuSeparator className="mx-0 my-0" />
+        <div className="scrollbar-thin max-h-96 overflow-y-auto p-1">
+          {data?.data.length ? (
+            data.data.map((notification) => (
+              <DropdownMenuItem key={notification.id} onSelect={() => void open(notification)} className="items-start gap-2.5 px-2.5 py-2">
+                <span className={cn('mt-1.5 size-2 shrink-0 rounded-full', notification.isRead ? 'bg-transparent' : 'bg-primary')} aria-hidden />
+                <span className="min-w-0 flex-1 space-y-0.5">
+                  <span className={cn('block text-sm leading-5', !notification.isRead && 'font-semibold')}>
+                    {notification.title}
+                    {!notification.isRead ? <span className="sr-only"> (unread)</span> : null}
+                  </span>
+                  <span className="line-clamp-2 block text-xs leading-4 text-muted-foreground">{notification.message}</span>
+                  <span className="block text-[11px] text-subtle-foreground">{formatRelative(notification.createdAt)}</span>
+                </span>
+              </DropdownMenuItem>
+            ))
+          ) : (
+            <div className="flex flex-col items-center gap-1.5 px-3 py-8 text-center">
+              <BellOff className="size-5 text-subtle-foreground" aria-hidden />
+              <p className="text-sm font-medium">No notifications</p>
+              <p className="text-xs text-muted-foreground">Approvals and automation updates will appear here.</p>
+            </div>
+          )}
+        </div>
+        <DropdownMenuSeparator className="mx-0 my-0" />
+        <div className="p-1">
+          <DropdownMenuItem asChild>
+            <Link href="/notifications" className="justify-center text-sm font-medium text-primary">
+              View all notifications
+            </Link>
+          </DropdownMenuItem>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
-export function AppShell({ children }: { children: ReactNode }) {
-  const { user, can, logout } = useAuth();
-  const pathname = usePathname();
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const theme = useTheme();
-  useEffect(() => setMobileOpen(false), [pathname]);
-
-  const sidebar = (
-    <nav className="flex h-full flex-col gap-6 px-3 py-4">
-      <Link href="/dashboard" className="flex items-center gap-2 px-2 text-sidebar-accent-foreground">
-        <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <Workflow className="size-4" />
-        </span>
-        <span className="font-semibold tracking-tight">Orchestra AI</span>
-      </Link>
+function SidebarNav({ collapsed, pathname }: { collapsed: boolean; pathname: string }) {
+  const { can } = useAuth();
+  return (
+    <div className="scrollbar-thin flex-1 space-y-6 overflow-x-hidden overflow-y-auto px-3 py-4">
       {NAV.map((group) => {
         const items = group.items.filter((item) => item.visible((permission) => can(permission)));
         if (items.length === 0) return null;
         return (
-          <div key={group.section} className="space-y-1">
-            <p className="px-2 text-[11px] font-medium tracking-wider text-sidebar-muted uppercase">{group.section}</p>
+          <div key={group.section} className="space-y-0.5">
+            <p
+              className={cn(
+                'mb-1.5 h-4 overflow-hidden px-3 text-[11px] font-semibold tracking-wider whitespace-nowrap text-sidebar-muted uppercase transition-opacity duration-200',
+                collapsed && 'opacity-0',
+              )}
+              aria-hidden={collapsed}
+            >
+              {group.section}
+            </p>
             {items.map((item) => {
               const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    'flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors',
-                    active
-                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                      : 'text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground',
-                  )}
-                >
-                  <item.icon className="size-4" />
-                  {item.label}
-                </Link>
+                <Tooltip key={item.href} content={item.label} side="right" disabled={!collapsed}>
+                  <Link
+                    href={item.href}
+                    aria-current={active ? 'page' : undefined}
+                    className={cn(
+                      'group relative flex h-9 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors duration-150 outline-none focus-visible:shadow-[0_0_0_2px_var(--sidebar-indicator)]',
+                      active
+                        ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                        : 'text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'absolute top-1.5 bottom-1.5 left-0 w-[3px] origin-center rounded-r-full bg-sidebar-indicator transition-transform duration-200 ease-[var(--ease-out)]',
+                        active ? 'scale-y-100' : 'scale-y-0',
+                      )}
+                      aria-hidden
+                    />
+                    <item.icon
+                      className={cn(
+                        'size-[18px] shrink-0 transition-colors',
+                        active ? 'text-sidebar-indicator' : 'text-sidebar-muted group-hover:text-sidebar-accent-foreground',
+                      )}
+                      aria-hidden
+                    />
+                    <span className={cn('truncate', collapsed && 'sr-only')}>{item.label}</span>
+                  </Link>
+                </Tooltip>
               );
             })}
           </div>
         );
       })}
-      <div className="mt-auto rounded-lg border border-sidebar-border px-3 py-2 text-xs text-sidebar-muted">
-        Signed in as <span className="text-sidebar-accent-foreground">{user.roles.map((role) => ROLE_LABELS[role]).join(', ')}</span>
-        {user.department ? <div>{user.department.name}</div> : null}
-      </div>
-    </nav>
+    </div>
   );
+}
 
+function Brand({ collapsed }: { collapsed: boolean }) {
   return (
-    <div className="flex min-h-dvh">
-      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 border-r border-sidebar-border bg-sidebar lg:block">{sidebar}</aside>
-      {mobileOpen ? (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 w-64 bg-sidebar">
-            <button className="absolute top-3 right-3 text-sidebar-foreground" onClick={() => setMobileOpen(false)} aria-label="Close menu">
-              <X className="size-5" />
-            </button>
-            {sidebar}
-          </aside>
-        </div>
-      ) : null}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/85 px-4 backdrop-blur sm:px-6">
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Open menu">
-            <Menu />
-          </Button>
-          <div className="flex-1" />
-          <Button variant="ghost" size="icon" onClick={theme.toggle} aria-label="Toggle theme">
-            {theme.dark ? <Sun /> : <Moon />}
-          </Button>
-          <NotificationsMenu />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="gap-2 px-2" data-testid="user-menu">
-                <span className="flex size-7 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
-                  {user.name
-                    .split(' ')
-                    .map((part) => part[0])
-                    .slice(0, 2)
-                    .join('')}
-                </span>
-                <span className="hidden text-sm sm:inline">{user.name}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>
-                <div>{user.name}</div>
-                <div className="text-xs font-normal text-muted-foreground">{user.email}</div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/profile">
-                  <UserRound /> Profile
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => void logout()} data-testid="logout">
-                <LogOut /> Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </header>
-        <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:py-8">{children}</main>
+    <Link
+      href="/dashboard"
+      className="flex h-16 shrink-0 items-center gap-2.5 overflow-hidden px-5 text-sidebar-accent-foreground outline-none focus-visible:shadow-[inset_0_0_0_2px_var(--sidebar-indicator)]"
+    >
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.2)]">
+        <Workflow className="size-4" aria-hidden />
+      </span>
+      <span className={cn('min-w-0 whitespace-nowrap', collapsed && 'sr-only')}>
+        <span className="block text-sm leading-4 font-semibold tracking-tight">Orchestra AI</span>
+        <span className="block text-[11px] leading-4 text-sidebar-muted">Enterprise automation</span>
+      </span>
+    </Link>
+  );
+}
+
+function SidebarFooter({ collapsed }: { collapsed: boolean }) {
+  const { user } = useAuth();
+  const roles = user.roles.map((role) => ROLE_LABELS[role]).join(', ');
+  return (
+    <div className="shrink-0 border-t border-sidebar-border p-3">
+      <div className="flex items-center gap-2.5 overflow-hidden rounded-md px-1.5 py-1" title={collapsed ? `${user.name} · ${roles}` : undefined}>
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-xs font-semibold text-sidebar-accent-foreground ring-1 ring-sidebar-border">
+          {initials(user.name)}
+        </span>
+        <span className={cn('min-w-0 text-xs whitespace-nowrap', collapsed && 'sr-only')}>
+          <span className="block truncate font-medium text-sidebar-accent-foreground">Signed in as {roles}</span>
+          <span className="block truncate text-sidebar-muted">{user.department?.name ?? 'No department'}</span>
+        </span>
       </div>
     </div>
+  );
+}
+
+export function AppShell({ children }: { children: ReactNode }) {
+  const { user, logout } = useAuth();
+  const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const theme = useTheme();
+  const sidebar = useCollapsed();
+  const context = pageContext(pathname);
+  useEffect(() => setMobileOpen(false), [pathname]);
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [mobileOpen]);
+
+  return (
+    <TooltipProvider delayDuration={250}>
+      <div className="flex min-h-dvh">
+        {/* Desktop sidebar */}
+        <aside
+          className={cn(
+            'sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-[220ms] ease-[var(--ease-out)] lg:flex',
+            sidebar.collapsed ? 'w-[72px]' : 'w-64',
+          )}
+          aria-label="Main navigation"
+        >
+          <Brand collapsed={sidebar.collapsed} />
+          <SidebarNav collapsed={sidebar.collapsed} pathname={pathname} />
+          <SidebarFooter collapsed={sidebar.collapsed} />
+        </aside>
+
+        {/* Mobile drawer: always mounted so it can slide; inert while closed */}
+        <div className={cn('fixed inset-0 z-40 lg:hidden', !mobileOpen && 'pointer-events-none')} inert={!mobileOpen}>
+          <div
+            className={cn('absolute inset-0 bg-slate-950/60 transition-opacity duration-200', mobileOpen ? 'opacity-100' : 'opacity-0')}
+            onClick={() => setMobileOpen(false)}
+            aria-hidden
+          />
+          <aside
+            className={cn(
+              'absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-sidebar shadow-lg transition-transform duration-[220ms] ease-[var(--ease-out)]',
+              mobileOpen ? 'translate-x-0' : '-translate-x-full',
+            )}
+            aria-label="Mobile navigation"
+          >
+            <button
+              className="absolute top-4 right-3 flex size-8 items-center justify-center rounded-md text-sidebar-foreground hover:bg-sidebar-accent focus-visible:shadow-[0_0_0_2px_var(--sidebar-indicator)] focus-visible:outline-none"
+              onClick={() => setMobileOpen(false)}
+              aria-label="Close menu"
+            >
+              <X className="size-5" />
+            </button>
+            <Brand collapsed={false} />
+            <SidebarNav collapsed={false} pathname={pathname} />
+            <SidebarFooter collapsed={false} />
+          </aside>
+        </div>
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-30 flex h-16 items-center gap-1.5 border-b bg-background/90 px-3 backdrop-blur-sm sm:gap-2 sm:px-6">
+            <IconButton label="Open menu" className="lg:hidden" onClick={() => setMobileOpen(true)}>
+              <Menu />
+            </IconButton>
+            <IconButton
+              label={sidebar.collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              className="hidden lg:inline-flex"
+              onClick={sidebar.toggle}
+              aria-expanded={!sidebar.collapsed}
+            >
+              {sidebar.collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+            </IconButton>
+            <div className="mx-1 hidden h-5 w-px bg-border lg:block" aria-hidden />
+            <nav aria-label="Breadcrumb" className="min-w-0 flex-1">
+              <ol className="flex min-w-0 items-center gap-1.5 text-sm">
+                {context.parent ? (
+                  <>
+                    <li className="hidden min-w-0 sm:block">
+                      <Link href={context.parent.href} className="truncate text-muted-foreground transition-colors hover:text-foreground">
+                        {context.parent.label}
+                      </Link>
+                    </li>
+                    <li className="hidden text-subtle-foreground sm:block" aria-hidden>
+                      <ChevronRight className="size-3.5" />
+                    </li>
+                  </>
+                ) : null}
+                <li className="truncate font-semibold tracking-tight" aria-current="page">
+                  {context.title}
+                </li>
+              </ol>
+            </nav>
+            <IconButton label={theme.dark ? 'Switch to light theme' : 'Switch to dark theme'} onClick={theme.toggle}>
+              <span className="relative size-4">
+                <Sun
+                  className={cn(
+                    'absolute inset-0 transition-[opacity,transform] duration-200',
+                    theme.dark ? 'scale-100 rotate-0 opacity-100' : 'scale-50 -rotate-90 opacity-0',
+                  )}
+                />
+                <Moon
+                  className={cn(
+                    'absolute inset-0 transition-[opacity,transform] duration-200',
+                    theme.dark ? 'scale-50 rotate-90 opacity-0' : 'scale-100 rotate-0 opacity-100',
+                  )}
+                />
+              </span>
+            </IconButton>
+            <NotificationsMenu />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="gap-2 pr-2 pl-1.5" data-testid="user-menu" aria-label={`Account menu for ${user.name}`}>
+                  <span className="flex size-7 items-center justify-center rounded-full bg-primary/12 text-[11px] font-semibold text-primary ring-1 ring-primary/20 dark:text-info-foreground">
+                    {initials(user.name)}
+                  </span>
+                  <span className="hidden max-w-40 truncate text-sm font-medium md:inline">{user.name}</span>
+                  <ChevronDown className="hidden size-3.5 text-muted-foreground md:block" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel className="space-y-0.5 py-2">
+                  <div className="truncate">{user.name}</div>
+                  <div className="truncate text-xs font-normal text-muted-foreground">{user.email}</div>
+                  <div className="flex flex-wrap gap-1 pt-1.5">
+                    {user.roles.map((role) => (
+                      <Badge key={role} tone="primary">
+                        {ROLE_LABELS[role]}
+                      </Badge>
+                    ))}
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/profile">
+                    <UserRound /> Profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/notifications">
+                    <Bell /> Notifications
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => void logout()} data-testid="logout" className="text-destructive-foreground focus:text-destructive-foreground">
+                  <LogOut /> Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </header>
+          <main id="main" className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+            <div key={pathname} className="animate-page-in">
+              {children}
+            </div>
+          </main>
+        </div>
+      </div>
+    </TooltipProvider>
   );
 }

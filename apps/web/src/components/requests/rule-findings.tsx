@@ -30,7 +30,7 @@ export function RuleFindings({ evaluation }: { evaluation: RuleEvaluationResult 
             </li>
           ))}
           {warnings.map((finding, index) => (
-            <li key={`w${index}`} className="flex gap-2 text-[oklch(0.5_0.13_60)] dark:text-warning">
+            <li key={`w${index}`} className="flex gap-2 text-warning-foreground">
               <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
               <span>
                 {finding.message} <span className="font-mono text-[11px] opacity-70">{finding.ruleId}</span>

@@ -2,13 +2,13 @@
 
 import { Permission, ROLE_LABELS, ROLE_NAMES, type RoleName } from '@orchestra/domain';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Plus, Search } from 'lucide-react';
+import { Loader2, Pencil, Plus, UserX } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { EmptyState, ErrorBlock, LoadingBlock, PageHeader, Pager } from '@/components/page';
 import { Button } from '@/components/ui/button';
 import { Checkbox, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/overlays';
-import { Badge, Card, Input, Label, NativeSelect, Table, TBody, TD, TH, THead, TR } from '@/components/ui/primitives';
+import { Badge, Card, Input, Label, NativeSelect, SearchInput, Table, TBody, TD, TH, THead, TR } from '@/components/ui/primitives';
 import { api, errorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatRelative } from '@/lib/format';
@@ -89,9 +89,9 @@ function UserDialog({ draft, onClose, departments }: { draft: Draft | null; onCl
           </div>
           <div className="space-y-1.5">
             <Label>Roles</Label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid gap-2 sm:grid-cols-2">
               {ROLE_NAMES.map((role) => (
-                <label key={role} className="flex items-center gap-2 text-sm">
+                <label key={role} className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors hover:bg-muted/50 has-[[data-state=checked]]:border-primary/40 has-[[data-state=checked]]:bg-primary/5">
                   <Checkbox checked={value.roles.includes(role)} onCheckedChange={(checked) => toggleRole(role, checked === true)} />
                   {ROLE_LABELS[role]}
                 </label>
@@ -141,20 +141,23 @@ export default function UsersPage() {
         actions={<Button onClick={() => setDraft(EMPTY)}><Plus /> New user</Button>}
       />
       <form
-        className="relative mb-4 max-w-sm"
+        className="mb-4 max-w-md"
+        role="search"
         onSubmit={(event) => {
           event.preventDefault();
           setPage(1);
           setQuery(search.trim());
         }}
       >
-        <Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
-        <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name or email" className="pl-8" />
+        <SearchInput value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name or email — press Enter" aria-label="Search users" />
       </form>
-      {users.error ? <ErrorBlock error={users.error} /> : null}
-      {users.isLoading ? <LoadingBlock rows={6} /> : null}
-      {users.data ? (
-        <Card>
+      {users.error ? <ErrorBlock error={users.error} onRetry={() => void users.refetch()} /> : null}
+      {users.isLoading ? <LoadingBlock rows={6} label="Loading users" /> : null}
+      {users.data && users.data.data.length === 0 ? (
+        <EmptyState icon={UserX} title="No matching users" description={query ? `Nobody matches “${query}”. Try another name or email.` : 'Create the first user account.'} />
+      ) : null}
+      {users.data && users.data.data.length > 0 ? (
+        <Card className="overflow-hidden">
           <Table>
             <THead>
               <TR>
@@ -163,15 +166,27 @@ export default function UsersPage() {
                 <TH className="hidden md:table-cell">Department</TH>
                 <TH>Status</TH>
                 <TH className="hidden lg:table-cell">Last sign-in</TH>
-                <TH />
+                <TH><span className="sr-only">Actions</span></TH>
               </TR>
             </THead>
             <TBody>
               {users.data.data.map((user) => (
                 <TR key={user.id}>
                   <TD>
-                    <div className="font-medium">{user.name}</div>
-                    <div className="text-xs text-muted-foreground">{user.email}</div>
+                    <div className="flex items-center gap-3">
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-semibold text-muted-foreground ring-1 ring-border" aria-hidden>
+                        {user.name
+                          .split(' ')
+                          .map((part) => part[0])
+                          .slice(0, 2)
+                          .join('')
+                          .toUpperCase()}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">{user.name}</div>
+                        <div className="truncate text-xs text-muted-foreground">{user.email}</div>
+                      </div>
+                    </div>
                   </TD>
                   <TD>
                     <div className="flex flex-wrap gap-1">
@@ -182,7 +197,15 @@ export default function UsersPage() {
                   </TD>
                   <TD className="hidden md:table-cell">{user.department?.name ?? '—'}</TD>
                   <TD>
-                    {user.isActive ? <Badge tone="success">Active</Badge> : <Badge tone="neutral">Inactive</Badge>}
+                    {user.isActive ? (
+                      <Badge tone="success">
+                        <span className="size-1.5 rounded-full bg-current" aria-hidden /> Active
+                      </Badge>
+                    ) : (
+                      <Badge tone="neutral">
+                        <span className="size-1.5 rounded-full bg-current" aria-hidden /> Inactive
+                      </Badge>
+                    )}
                     {user.lockedUntil && new Date(user.lockedUntil) > new Date() ? <Badge tone="danger" className="ml-1">Locked</Badge> : null}
                   </TD>
                   <TD className="hidden text-muted-foreground lg:table-cell">{formatRelative(user.lastLoginAt)}</TD>
@@ -194,7 +217,7 @@ export default function UsersPage() {
                         setDraft({ id: user.id, name: user.name, email: user.email, password: '', departmentId: user.department?.id ?? '', roles: user.roles, isActive: user.isActive })
                       }
                     >
-                      Edit
+                      <Pencil /> Edit<span className="sr-only"> {user.name}</span>
                     </Button>
                   </TD>
                 </TR>

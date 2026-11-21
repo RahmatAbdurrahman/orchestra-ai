@@ -2,23 +2,41 @@
 
 import { Permission } from '@orchestra/domain';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Loader2, PlugZap, XCircle } from 'lucide-react';
+import { Activity, CheckCircle2, Loader2, PlugZap, RefreshCw, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { ErrorBlock, KeyValue, LoadingBlock, PageHeader } from '@/components/page';
 import { Button } from '@/components/ui/button';
-import { Alert, Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/primitives';
+import { Alert, Badge, type BadgeTone, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/primitives';
 import { api, errorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTime, formatRelative } from '@/lib/format';
 import type { SystemHealth, UiPathHealth } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
-function Check({ ok, label }: { ok: boolean; label: string }) {
+function Check({ ok, label, detail }: { ok: boolean; label: string; detail?: string }) {
   return (
-    <div className="flex items-center gap-2 text-sm">
-      {ok ? <CheckCircle2 className="size-4 text-success" /> : <XCircle className="size-4 text-destructive" />}
-      {label}
+    <div className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5 transition-colors duration-300">
+      <span
+        className={cn(
+          'flex size-7 shrink-0 items-center justify-center rounded-full transition-colors duration-300',
+          ok ? 'bg-success/10 text-success-foreground' : 'bg-destructive/10 text-destructive-foreground',
+        )}
+      >
+        {ok ? <CheckCircle2 className="size-4" aria-hidden /> : <XCircle className="size-4" aria-hidden />}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium">{label}</span>
+        {detail ? <span className="block truncate text-xs text-muted-foreground">{detail}</span> : null}
+      </span>
+      <span className={cn('text-xs font-medium', ok ? 'text-success-foreground' : 'text-destructive-foreground')}>{ok ? 'OK' : 'Failed'}</span>
     </div>
   );
+}
+
+function latencyTone(ms: number): BadgeTone {
+  if (ms < 800) return 'success';
+  if (ms < 2500) return 'warning';
+  return 'danger';
 }
 
 export default function IntegrationsPage() {
@@ -39,23 +57,36 @@ export default function IntegrationsPage() {
   return (
     <>
       <PageHeader title="Integrations" description="UiPath Orchestrator connectivity and platform health. Credentials stay on the server and are never shown." />
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="stagger grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader className="flex-row items-start justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2"><PlugZap className="size-4" /> UiPath Orchestrator</CardTitle>
-              <CardDescription>OAuth client credentials (External Application)</CardDescription>
+          <CardHeader className="flex-row items-start justify-between gap-3">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary dark:text-info-foreground">
+                <PlugZap className="size-5" aria-hidden />
+              </span>
+              <div className="min-w-0 space-y-1">
+                <CardTitle className="flex flex-wrap items-center gap-2">
+                  UiPath Orchestrator
+                  {uipath.data ? (
+                    <Badge tone={uipath.data.ok ? (uipath.data.isMock ? 'warning' : 'success') : 'danger'}>
+                      <span className="size-1.5 rounded-full bg-current" aria-hidden />
+                      {uipath.data.ok ? 'Connected' : 'Not connected'}
+                    </Badge>
+                  ) : null}
+                </CardTitle>
+                <CardDescription>OAuth client credentials (External Application)</CardDescription>
+              </div>
             </div>
             {can(Permission.INTEGRATIONS_MANAGE) ? (
-              <Button size="sm" onClick={() => test.mutate()} disabled={test.isPending}>
-                {test.isPending ? <Loader2 className="animate-spin" /> : null}
-                Test connection
+              <Button size="sm" variant="outline" onClick={() => test.mutate()} disabled={test.isPending}>
+                {test.isPending ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+                {test.isPending ? 'Testing…' : 'Test connection'}
               </Button>
             ) : null}
           </CardHeader>
           <CardContent className="space-y-4">
-            {uipath.error ? <ErrorBlock error={uipath.error} /> : null}
-            {uipath.isLoading ? <LoadingBlock rows={3} /> : null}
+            {uipath.error ? <ErrorBlock error={uipath.error} onRetry={() => void uipath.refetch()} /> : null}
+            {uipath.isLoading ? <LoadingBlock rows={4} label="Checking UiPath" /> : null}
             {uipath.data ? (
               <>
                 {uipath.data.isMock ? (
@@ -63,41 +94,65 @@ export default function IntegrationsPage() {
                     Connected to the <strong>development mock</strong> of Orchestrator. Its simulated robot drives the ERP simulation; results do not demonstrate a real UiPath robot.
                   </Alert>
                 ) : null}
-                <div className="grid grid-cols-2 gap-2">
-                  <Check ok={uipath.data.configured} label="Configured" />
-                  <Check ok={uipath.data.authenticated} label="Authenticated" />
-                  <Check ok={uipath.data.folderAccessible} label="Folder accessible" />
-                  <Check ok={uipath.data.processFound} label={`Process “${uipath.data.processName}” found`} />
+                <div className="grid gap-2 sm:grid-cols-2" aria-live="polite">
+                  <Check ok={uipath.data.configured} label="Configured" detail="Client credentials present" />
+                  <Check ok={uipath.data.authenticated} label="Authenticated" detail="Access token issued" />
+                  <Check ok={uipath.data.folderAccessible} label="Folder accessible" detail={uipath.data.folderId ? `Folder ${uipath.data.folderId}` : undefined} />
+                  <Check ok={uipath.data.processFound} label="Process found" detail={uipath.data.processName} />
                 </div>
-                {uipath.data.message ? <p className="text-sm text-destructive">{uipath.data.message}</p> : null}
-                <div className="grid grid-cols-2 gap-4">
-                  <KeyValue label="Mode"><Badge tone={uipath.data.isMock ? 'warning' : 'primary'}>{uipath.data.mode}</Badge></KeyValue>
-                  <KeyValue label="Latency">{uipath.data.latencyMs} ms</KeyValue>
-                  <KeyValue label="Orchestrator URL" className="col-span-2"><span className="font-mono text-xs">{uipath.data.orchestratorUrl ?? '—'}</span></KeyValue>
+                {uipath.data.message ? (
+                  <Alert tone="danger">
+                    <XCircle className="size-4" />
+                    <div>{uipath.data.message}</div>
+                  </Alert>
+                ) : null}
+                <dl className="grid grid-cols-2 gap-4 border-t pt-4">
+                  <KeyValue label="Mode">
+                    <Badge tone={uipath.data.isMock ? 'warning' : 'primary'}>{uipath.data.mode}</Badge>
+                  </KeyValue>
+                  <KeyValue label="Latency">
+                    <Badge tone={latencyTone(uipath.data.latencyMs)} className="tabular-nums">
+                      {uipath.data.latencyMs} ms
+                    </Badge>
+                  </KeyValue>
+                  <KeyValue label="Orchestrator URL" className="col-span-2">
+                    <span className="font-mono text-xs">{uipath.data.orchestratorUrl ?? '—'}</span>
+                  </KeyValue>
                   <KeyValue label="Folder (OrganizationUnitId)">{uipath.data.folderId ?? '—'}</KeyValue>
-                  <KeyValue label="Checked">{formatDateTime(uipath.data.checkedAt)}</KeyValue>
-                </div>
+                  <KeyValue label="Last health check">
+                    <span title={formatDateTime(uipath.data.checkedAt)}>{formatRelative(uipath.data.checkedAt)}</span>
+                  </KeyValue>
+                </dl>
               </>
             ) : null}
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Platform health</CardTitle>
-            <CardDescription>API dependencies</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="size-4 text-muted-foreground" aria-hidden /> Platform health
+            </CardTitle>
+            <CardDescription>Dependencies reported by the API health endpoint</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2">
+            {system.error ? <ErrorBlock error={system.error} onRetry={() => void system.refetch()} /> : null}
             {system.data ? (
-              <>
-                <Check ok={system.data.checks.database === 'up'} label="PostgreSQL" />
-                <Check ok={system.data.checks.queue.status === 'up'} label={`Queue (${system.data.checks.queue.driver === 'inline' ? 'in-process, development only' : 'Redis / BullMQ'})`} />
-                <Check ok={system.data.checks.documentIntelligence === 'up'} label="Document intelligence service" />
-                <Check ok={system.data.checks.uipath === 'configured'} label="UiPath configured" />
-                <p className="text-xs text-muted-foreground">Checked {formatDateTime(system.data.time)}</p>
-              </>
-            ) : (
-              <LoadingBlock rows={3} />
-            )}
+              <div className="space-y-2" aria-live="polite">
+                <Check ok={system.data.checks.database === 'up'} label="PostgreSQL" detail="Primary database" />
+                <Check
+                  ok={system.data.checks.queue.status === 'up'}
+                  label="Job queue"
+                  detail={system.data.checks.queue.driver === 'inline' ? 'In-process, development only' : 'Redis / BullMQ'}
+                />
+                <Check ok={system.data.checks.documentIntelligence === 'up'} label="Document intelligence" detail="OCR and field extraction service" />
+                <Check ok={system.data.checks.uipath === 'configured'} label="UiPath configured" detail="Credentials present on the server" />
+                <p className="pt-1 text-xs text-muted-foreground">
+                  Checked <span title={formatDateTime(system.data.time)}>{formatRelative(system.data.time)}</span> · refreshes every 15 s
+                </p>
+              </div>
+            ) : !system.error ? (
+              <LoadingBlock rows={4} label="Checking platform health" />
+            ) : null}
           </CardContent>
         </Card>
       </div>

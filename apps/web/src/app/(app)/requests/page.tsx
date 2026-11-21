@@ -2,14 +2,14 @@
 
 import { Permission, PURCHASE_REQUEST_STATUS_LABELS, PURCHASE_REQUEST_STATUSES } from '@orchestra/domain';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { Plus, Search } from 'lucide-react';
+import { FileText, Plus, SearchX, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { EmptyState, ErrorBlock, LoadingBlock, PageHeader, Pager } from '@/components/page';
+import { EmptyState, ErrorBlock, LoadingBlock, PageHeader, Pager, Toolbar } from '@/components/page';
 import { RequestStatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import { Card, Input, NativeSelect, Table, TBody, TD, TH, THead, TR } from '@/components/ui/primitives';
+import { Card, NativeSelect, SearchInput, Table, TBody, TD, TH, THead, TR } from '@/components/ui/primitives';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatDate, formatMoney, formatRelative } from '@/lib/format';
@@ -45,21 +45,20 @@ export default function RequestsPage() {
           ) : null
         }
       />
-      <Card className="mb-4 flex flex-col gap-3 p-3 sm:flex-row">
+      <Toolbar>
         <form
-          className="relative flex-1"
+          className="flex-1"
+          role="search"
           onSubmit={(event) => {
             event.preventDefault();
             setPage(1);
             setQuery(search.trim());
           }}
         >
-          <Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
-          <Input
+          <SearchInput
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search request number, title or supplier"
-            className="pl-8"
+            placeholder="Search request number, title or supplier — press Enter"
             aria-label="Search requests"
           />
         </form>
@@ -79,25 +78,45 @@ export default function RequestsPage() {
             </option>
           ))}
         </NativeSelect>
-      </Card>
+        {query || status ? (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setSearch('');
+              setQuery('');
+              setStatus('');
+              setPage(1);
+            }}
+          >
+            <X /> Clear filters
+          </Button>
+        ) : null}
+      </Toolbar>
 
-      {requests.error ? <ErrorBlock error={requests.error} /> : null}
-      {requests.isLoading ? <LoadingBlock rows={6} /> : null}
+      {requests.error ? <ErrorBlock error={requests.error} onRetry={() => void requests.refetch()} /> : null}
+      {requests.isLoading ? <LoadingBlock rows={6} label="Loading purchase requests" /> : null}
       {requests.data && requests.data.data.length === 0 ? (
         <EmptyState
-          title="No purchase requests"
-          description={query || status ? 'Try another filter.' : 'Requests you can see will appear here.'}
+          icon={query || status ? SearchX : FileText}
+          title={query || status ? 'No matching purchase requests' : 'No purchase requests yet'}
+          description={
+            query || status
+              ? `Nothing matches${query ? ` “${query}”` : ''}${status ? ` with status ${PURCHASE_REQUEST_STATUS_LABELS[status as keyof typeof PURCHASE_REQUEST_STATUS_LABELS]}` : ''}. Try a different search or clear the filters.`
+              : 'Requests you are allowed to see will appear here as they are created.'
+          }
           action={
-            can(Permission.REQUESTS_CREATE) ? (
-              <Button asChild size="sm" className="mt-2">
-                <Link href="/requests/new">Create the first request</Link>
+            !query && !status && can(Permission.REQUESTS_CREATE) ? (
+              <Button asChild size="sm">
+                <Link href="/requests/new">
+                  <Plus /> Create the first request
+                </Link>
               </Button>
             ) : null
           }
         />
       ) : null}
       {requests.data && requests.data.data.length > 0 ? (
-        <Card>
+        <Card className="overflow-hidden">
           <Table>
             <THead>
               <TR>
@@ -112,9 +131,9 @@ export default function RequestsPage() {
             </THead>
             <TBody>
               {requests.data.data.map((row) => (
-                <TR key={row.id} className="cursor-pointer" onClick={() => router.push(`/requests/${row.id}`)}>
+                <TR key={row.id} className="group cursor-pointer" onClick={() => router.push(`/requests/${row.id}`)}>
                   <TD>
-                    <Link href={`/requests/${row.id}`} className="font-medium hover:underline" onClick={(event) => event.stopPropagation()}>
+                    <Link href={`/requests/${row.id}`} className="font-mono text-[13px] font-semibold hover:text-primary hover:underline" onClick={(event) => event.stopPropagation()}>
                       {row.requestNumber}
                     </Link>
                     <div className="max-w-64 truncate text-xs text-muted-foreground">{row.title}</div>

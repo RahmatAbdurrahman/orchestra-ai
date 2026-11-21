@@ -2,12 +2,13 @@
 
 import { AUTOMATION_JOB_STATUS_LABELS, AUTOMATION_JOB_STATUSES } from '@orchestra/domain';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { Bot, TriangleAlert } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { EmptyState, ErrorBlock, LoadingBlock, PageHeader, Pager } from '@/components/page';
+import { EmptyState, ErrorBlock, LoadingBlock, PageHeader, Pager, Toolbar } from '@/components/page';
 import { JobStatusBadge } from '@/components/status-badge';
-import { Badge, Card, NativeSelect, Table, TBody, TD, TH, THead, TR } from '@/components/ui/primitives';
+import { Badge, Card, NativeSelect, Skeleton, Table, TBody, TD, TH, THead, TR } from '@/components/ui/primitives';
 import { api } from '@/lib/api';
 import { formatDuration, formatRelative } from '@/lib/format';
 import type { AutomationJobRow, Paginated, UiPathHealth } from '@/lib/types';
@@ -36,16 +37,22 @@ export default function AutomationPage() {
         description="Purchase order creation jobs executed by UiPath robots."
         actions={
           health.data ? (
-            <Badge tone={health.data.ok ? (health.data.isMock ? 'warning' : 'success') : 'danger'}>
+            <Badge tone={health.data.ok ? (health.data.isMock ? 'warning' : 'success') : 'danger'} className="px-2.5 py-1">
+              <span className="size-1.5 rounded-full bg-current" aria-hidden />
               UiPath {health.data.ok ? 'connected' : 'unavailable'}
               {health.data.isMock ? ' · MOCK Orchestrator' : ''}
             </Badge>
+          ) : health.isLoading ? (
+            <Skeleton className="h-6 w-36 rounded-full" />
           ) : null
         }
       />
-      <div className="mb-4 flex justify-end">
+      <Toolbar className="sm:justify-between">
+        <p className="text-[13px] text-muted-foreground">
+          Statuses come from UiPath Orchestrator and refresh every few seconds.
+        </p>
         <NativeSelect
-          className="w-56"
+          className="sm:w-56"
           value={status}
           aria-label="Filter by job status"
           onChange={(event) => {
@@ -60,12 +67,18 @@ export default function AutomationPage() {
             </option>
           ))}
         </NativeSelect>
-      </div>
-      {jobs.error ? <ErrorBlock error={jobs.error} /> : null}
-      {jobs.isLoading ? <LoadingBlock rows={6} /> : null}
-      {jobs.data?.data.length === 0 ? <EmptyState title="No automation jobs" description="Jobs are created when requests are fully approved." /> : null}
+      </Toolbar>
+      {jobs.error ? <ErrorBlock error={jobs.error} onRetry={() => void jobs.refetch()} /> : null}
+      {jobs.isLoading ? <LoadingBlock rows={6} label="Loading automation jobs" /> : null}
+      {jobs.data?.data.length === 0 ? (
+        <EmptyState
+          icon={Bot}
+          title={status ? 'No jobs with this status' : 'No automation jobs yet'}
+          description={status ? 'Choose another status to see more jobs.' : 'A UiPath job is created when a purchase request is fully approved.'}
+        />
+      ) : null}
       {jobs.data?.data.length ? (
-        <Card>
+        <Card className="overflow-hidden">
           <Table>
             <THead>
               <TR>
@@ -82,21 +95,31 @@ export default function AutomationPage() {
               {jobs.data.data.map((job) => (
                 <TR key={job.id} className="cursor-pointer" onClick={() => router.push(`/automation/${job.id}`)}>
                   <TD>
-                    <Link href={`/automation/${job.id}`} className="font-mono font-medium hover:underline" onClick={(event) => event.stopPropagation()}>
+                    <Link href={`/automation/${job.id}`} className="font-mono text-[13px] font-semibold hover:text-primary hover:underline" onClick={(event) => event.stopPropagation()}>
                       {job.purchaseRequest.requestNumber}
                     </Link>
                     <div className="max-w-56 truncate text-xs text-muted-foreground">{job.purchaseRequest.title}</div>
                   </TD>
                   <TD>
                     <JobStatusBadge status={job.status} />
-                    {job.requiresIntervention ? <div className="mt-1 text-[11px] text-destructive">Needs intervention</div> : null}
+                    {job.requiresIntervention ? (
+                      <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-destructive-foreground">
+                        <TriangleAlert className="size-3" aria-hidden /> Needs intervention
+                      </div>
+                    ) : null}
                   </TD>
                   <TD className="tabular-nums">
                     {job.attemptCount}/{job.maxTotalAttempts}
                   </TD>
-                  <TD className="hidden font-mono text-xs md:table-cell">{job.uipathJobId ?? '—'}</TD>
+                  <TD className="hidden font-mono text-xs text-muted-foreground md:table-cell">{job.uipathJobId ?? '—'}</TD>
                   <TD className="max-w-64 truncate">
-                    {job.poNumber ? <span className="font-mono">{job.poNumber}</span> : job.errorCode ? <span className="text-xs text-destructive">{job.errorCode}</span> : '—'}
+                    {job.poNumber ? (
+                      <span className="font-mono text-[13px] font-medium text-success-foreground">{job.poNumber}</span>
+                    ) : job.errorCode ? (
+                      <span className="font-mono text-xs text-destructive-foreground">{job.errorCode}</span>
+                    ) : (
+                      <span className="text-subtle-foreground">—</span>
+                    )}
                   </TD>
                   <TD className="hidden lg:table-cell">{formatDuration(job.durationSeconds)}</TD>
                   <TD className="hidden text-muted-foreground sm:table-cell">{formatRelative(job.completedAt ?? job.lastPolledAt ?? job.createdAt)}</TD>

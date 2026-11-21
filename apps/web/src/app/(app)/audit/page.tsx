@@ -1,14 +1,16 @@
 'use client';
 
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { ChevronRight, ScrollText } from 'lucide-react';
 import Link from 'next/link';
 import { Fragment, useState } from 'react';
 import { EmptyState, ErrorBlock, LoadingBlock, PageHeader, Pager } from '@/components/page';
 import { Badge, Card, NativeSelect, Table, TBody, TD, TH, THead, TR } from '@/components/ui/primitives';
 import { api } from '@/lib/api';
 import { describeEvent } from '@/lib/events';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTime, formatRelative } from '@/lib/format';
 import type { AuditEvent, Paginated } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 const ACTION_FILTERS = [
   ['', 'All events'],
@@ -54,14 +56,21 @@ export default function AuditPage() {
           </NativeSelect>
         }
       />
-      {audit.error ? <ErrorBlock error={audit.error} /> : null}
-      {audit.isLoading ? <LoadingBlock rows={8} /> : null}
-      {audit.data?.data.length === 0 ? <EmptyState title="No audit events" /> : null}
+      {audit.error ? <ErrorBlock error={audit.error} onRetry={() => void audit.refetch()} /> : null}
+      {audit.isLoading ? <LoadingBlock rows={8} label="Loading audit events" /> : null}
+      {audit.data?.data.length === 0 ? (
+        <EmptyState
+          icon={ScrollText}
+          title={action ? 'No events in this category' : 'No audit events'}
+          description={action ? 'Choose another category, or show all events.' : 'Events you are allowed to see are recorded here as work happens.'}
+        />
+      ) : null}
       {audit.data?.data.length ? (
-        <Card>
+        <Card className="overflow-hidden">
           <Table>
             <THead>
               <TR>
+                <TH className="w-8 pr-0"><span className="sr-only">Details</span></TH>
                 <TH>Time</TH>
                 <TH>Event</TH>
                 <TH className="hidden md:table-cell">Actor</TH>
@@ -71,14 +80,31 @@ export default function AuditPage() {
             <TBody>
               {audit.data.data.map((event) => (
                 <Fragment key={event.id}>
-                  <TR className="cursor-pointer" onClick={() => setExpanded(expanded === event.id ? null : event.id)}>
-                    <TD className="whitespace-nowrap text-xs text-muted-foreground">{formatDateTime(event.createdAt)}</TD>
+                  <TR className={cn('cursor-pointer', expanded === event.id && 'bg-muted/40')} onClick={() => setExpanded(expanded === event.id ? null : event.id)}>
+                    <TD className="w-8 pr-0">
+                      <button
+                        type="button"
+                        className="flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:shadow-[var(--focus-ring)] focus-visible:outline-none"
+                        aria-expanded={expanded === event.id}
+                        aria-label={expanded === event.id ? 'Hide event details' : 'Show event details'}
+                        onClick={(clickEvent) => {
+                          clickEvent.stopPropagation();
+                          setExpanded(expanded === event.id ? null : event.id);
+                        }}
+                      >
+                        <ChevronRight className={cn('size-4 transition-transform duration-200', expanded === event.id && 'rotate-90')} />
+                      </button>
+                    </TD>
+                    <TD className="whitespace-nowrap">
+                      <div className="text-[13px] tabular-nums">{formatDateTime(event.createdAt)}</div>
+                      <div className="text-[11px] text-subtle-foreground">{formatRelative(event.createdAt)}</div>
+                    </TD>
                     <TD>
-                      <div className="text-sm">{describeEvent(event)}</div>
-                      <div className="font-mono text-[11px] text-muted-foreground">{event.action}</div>
+                      <div className="text-sm font-medium">{describeEvent(event)}</div>
+                      <code className="mt-0.5 inline-block rounded bg-muted px-1.5 py-px font-mono text-[11px] text-muted-foreground">{event.action}</code>
                     </TD>
                     <TD className="hidden md:table-cell">
-                      {event.actor?.name ?? <Badge tone="neutral">{event.actorType === 'ROBOT' ? 'UiPath robot' : event.actorType === 'SYSTEM' ? 'System' : 'Anonymous'}</Badge>}
+                      {event.actor?.name ? <span className="text-[13px]">{event.actor.name}</span> : <Badge tone="neutral">{event.actorType === 'ROBOT' ? 'UiPath robot' : event.actorType === 'SYSTEM' ? 'System' : 'Anonymous'}</Badge>}
                     </TD>
                     <TD className="hidden lg:table-cell">
                       {event.purchaseRequestId ? (
@@ -92,14 +118,21 @@ export default function AuditPage() {
                   </TR>
                   {expanded === event.id ? (
                     <TR className="bg-muted/30 hover:bg-muted/30">
-                      <TD colSpan={4}>
-                        <pre className="overflow-auto text-[11px] leading-relaxed">
+                      <TD colSpan={5} className="pt-0">
+                        <div className="animate-fade-up space-y-2 py-1 pl-8">
+                          <dl className="flex flex-wrap gap-x-6 gap-y-1 text-xs">
+                            <div className="flex gap-1.5"><dt className="text-muted-foreground">Correlation ID</dt><dd className="font-mono">{event.correlationId ?? '—'}</dd></div>
+                            <div className="flex gap-1.5"><dt className="text-muted-foreground">IP</dt><dd className="font-mono">{event.ipAddress ?? '—'}</dd></div>
+                            <div className="flex gap-1.5"><dt className="text-muted-foreground">Actor type</dt><dd>{event.actorType}</dd></div>
+                          </dl>
+                        <pre className="scrollbar-thin max-h-80 overflow-auto rounded-md border bg-card p-3 font-mono text-[11px] leading-relaxed">
                           {JSON.stringify(
                             { old: event.oldValue, new: event.newValue, metadata: event.metadata, correlationId: event.correlationId, ip: event.ipAddress },
                             null,
                             2,
                           )}
                         </pre>
+                        </div>
                       </TD>
                     </TR>
                   ) : null}

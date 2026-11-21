@@ -173,7 +173,7 @@ export default function AutomationJobPage({ params }: { params: Promise<{ id: st
             {logs.data?.map((log) => (
               <li key={log.id} className="flex gap-3">
                 <span className="shrink-0 text-muted-foreground">{formatDateTime(log.createdAt)}</span>
-                <span className={cn('w-12 shrink-0', log.level === 'ERROR' ? 'text-destructive' : log.level === 'WARN' ? 'text-[oklch(0.55_0.13_60)]' : 'text-success')}>{log.level}</span>
+                <span className={cn('w-12 shrink-0', log.level === 'ERROR' ? 'text-destructive' : log.level === 'WARN' ? 'text-warning-foreground' : 'text-success-foreground')}>{log.level}</span>
                 <span className="min-w-0 break-words">
                   <span className="text-muted-foreground">[{log.eventType}{log.attemptNo ? ` #${log.attemptNo}` : ''}]</span> {log.message}
                 </span>

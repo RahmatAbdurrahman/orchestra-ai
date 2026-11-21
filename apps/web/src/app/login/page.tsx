@@ -81,7 +81,7 @@ function LoginForm() {
     <div className="grid min-h-dvh lg:grid-cols-[1.1fr_1fr]">
       <aside className="relative hidden flex-col justify-between overflow-hidden bg-sidebar p-10 text-sidebar-foreground lg:flex">
         <div className="flex items-center gap-2 text-sidebar-accent-foreground">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.2)]">
             <Workflow className="size-5" />
           </div>
           <span className="text-lg font-semibold tracking-tight">Orchestra AI</span>
@@ -96,7 +96,7 @@ function LoginForm() {
           </p>
           <ol className="grid grid-cols-2 gap-2 text-sm">
             {['Upload & extract', 'Verify & validate', 'Tiered approval', 'UiPath execution'].map((step, index) => (
-              <li key={step} className="rounded-lg border border-sidebar-border bg-sidebar-accent/40 px-3 py-2">
+              <li key={step} className="animate-fade-up rounded-lg border border-sidebar-border bg-sidebar-accent/50 px-3 py-2.5" style={{ animationDelay: `${index * 60}ms` }}>
                 <span className="mr-2 font-mono text-xs text-sidebar-muted">0{index + 1}</span>
                 {step}
               </li>
@@ -106,8 +106,8 @@ function LoginForm() {
         <p className="text-xs text-sidebar-muted">Simulation environment · synthetic data only</p>
       </aside>
 
-      <main className="flex items-center justify-center p-6">
-        <div className="w-full max-w-sm space-y-6">
+      <main className="flex items-center justify-center bg-background p-6">
+        <div className="w-full max-w-sm animate-page-in space-y-6">
           <div className="space-y-1">
             <div className="flex items-center gap-2 lg:hidden">
               <Workflow className="size-5 text-primary" />
@@ -139,14 +139,14 @@ function LoginForm() {
                   <p className="text-sm font-medium">Simulation: sign in as</p>
                   <p className="text-xs text-muted-foreground">One click, no password. Seeded accounts with synthetic data.</p>
                 </div>
-                <ul className="divide-y rounded-md border">
+                <ul className="divide-y overflow-hidden rounded-lg border">
                   {demoAccounts.map((account) => (
                     <li key={account.email}>
                       <button
                         type="button"
                         onClick={() => signInAs(account.email)}
                         disabled={demoPending !== null}
-                        className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-accent focus-visible:bg-accent focus-visible:outline-none disabled:opacity-60"
+                        className="group flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors duration-150 hover:bg-accent focus-visible:bg-accent focus-visible:outline-none disabled:opacity-60"
                       >
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-medium">{account.name}</span>
@@ -161,7 +161,7 @@ function LoginForm() {
                         {demoPending === account.email ? (
                           <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
                         ) : (
-                          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                          <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform duration-150 group-hover:translate-x-0.5" />
                         )}
                       </button>
                     </li>

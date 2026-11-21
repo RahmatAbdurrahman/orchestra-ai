@@ -2,7 +2,7 @@
 
 import { APPROVAL_GROUP_LABELS } from '@orchestra/domain';
 import { useQuery } from '@tanstack/react-query';
-import { TriangleAlert } from 'lucide-react';
+import { CheckCheck, History, TriangleAlert } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { EmptyState, ErrorBlock, LoadingBlock, PageHeader, Pager } from '@/components/page';
@@ -13,6 +13,7 @@ import { Badge, Card, CardContent, Table, TBody, TD, TH, THead, TR } from '@/com
 import { api } from '@/lib/api';
 import { formatDate, formatDateTime, formatMoney, formatRelative } from '@/lib/format';
 import type { Paginated, PendingApproval } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 interface DecidedApproval {
   id: string;
@@ -22,6 +23,33 @@ interface DecidedApproval {
   comments: string | null;
   decidedAt: string;
   purchaseRequest: { id: string; requestNumber: string; title: string; status: string; currency: string; totalAmount: number };
+}
+
+/** Where this decision sits in the ordered approval chain (presentation only). */
+function ApprovalLevels({ level, levels, group }: { level: number; levels: number; group: string }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <ol className="flex items-center gap-1" aria-label={`Approval level ${level} of ${levels}`}>
+        {Array.from({ length: levels }, (_, index) => {
+          const step = index + 1;
+          return (
+            <li
+              key={step}
+              className={cn(
+                'h-1.5 w-6 origin-left animate-grow-x rounded-full',
+                step < level ? 'bg-success' : step === level ? 'bg-warning' : 'bg-muted ring-1 ring-border ring-inset',
+              )}
+              style={{ animationDelay: `${index * 80}ms` }}
+              title={step < level ? `Level ${step}: approved` : step === level ? `Level ${step}: waiting for you` : `Level ${step}: later`}
+            />
+          );
+        })}
+      </ol>
+      <span className="text-xs font-medium text-muted-foreground">
+        Level {level}/{levels} · {group}
+      </span>
+    </div>
+  );
 }
 
 export default function ApprovalsPage() {
@@ -37,39 +65,42 @@ export default function ApprovalsPage() {
       <PageHeader title="Approvals" description="Requests waiting for your decision. Levels are decided in order; you cannot approve your own requests." />
       <Tabs defaultValue="pending">
         <TabsList>
-          <TabsTrigger value="pending">Waiting for me {pending.data?.length ? <Badge tone="warning">{pending.data.length}</Badge> : null}</TabsTrigger>
+          <TabsTrigger value="pending">Waiting for me {pending.data?.length ? <Badge tone="warning" className="tabular-nums">{pending.data.length}</Badge> : null}</TabsTrigger>
           <TabsTrigger value="decided">My decisions</TabsTrigger>
         </TabsList>
         <TabsContent value="pending">
-          {pending.error ? <ErrorBlock error={pending.error} /> : null}
-          {pending.isLoading ? <LoadingBlock rows={4} /> : null}
-          {pending.data?.length === 0 ? <EmptyState title="Nothing to approve" description="New approval requests will appear here and in your notifications." /> : null}
-          <div className="grid gap-3">
+          {pending.error ? <ErrorBlock error={pending.error} onRetry={() => void pending.refetch()} /> : null}
+          {pending.isLoading ? <LoadingBlock rows={4} label="Loading approvals" /> : null}
+          {pending.data?.length === 0 ? (
+            <EmptyState icon={CheckCheck} title="You're all caught up" description="Nothing is waiting for your decision. New approval requests will appear here and in your notifications." />
+          ) : null}
+          <div className="stagger grid gap-3">
             {pending.data?.map((approval) => (
-              <Card key={approval.id} data-testid="pending-approval">
+              <Card key={approval.id} data-testid="pending-approval" interactive className="overflow-hidden">
                 <CardContent className="flex flex-col gap-4 pt-5 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="min-w-0 space-y-1">
+                  <div className="min-w-0 space-y-2">
+                    <ApprovalLevels level={approval.approvalLevel} levels={approval.purchaseRequest.levels} group={APPROVAL_GROUP_LABELS[approval.approverGroup]} />
                     <div className="flex flex-wrap items-center gap-2">
-                      <Link href={`/requests/${approval.purchaseRequest.id}`} className="font-mono text-sm font-medium hover:underline">
+                      <Link href={`/requests/${approval.purchaseRequest.id}`} className="font-mono text-[13px] font-semibold hover:text-primary hover:underline">
                         {approval.purchaseRequest.requestNumber}
                       </Link>
-                      <Badge tone="primary">
-                        Level {approval.approvalLevel}/{approval.purchaseRequest.levels} · {APPROVAL_GROUP_LABELS[approval.approverGroup]}
-                      </Badge>
                       {approval.purchaseRequest.warningCount ? (
                         <Badge tone="warning">
                           <TriangleAlert /> {approval.purchaseRequest.warningCount} warning(s)
                         </Badge>
                       ) : null}
                     </div>
-                    <p className="truncate font-medium">{approval.purchaseRequest.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {approval.purchaseRequest.requester.name} · {approval.purchaseRequest.department.name} · {approval.purchaseRequest.supplierName ?? '—'} · needed{' '}
-                      {formatDate(approval.purchaseRequest.requiredDate)} · waiting {formatRelative(approval.activatedAt)}
-                    </p>
+                    <p className="truncate font-semibold tracking-tight">{approval.purchaseRequest.title}</p>
+                    <dl className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
+                      <div className="flex gap-1"><dt className="sr-only">Requester</dt><dd className="text-foreground">{approval.purchaseRequest.requester.name}</dd><span aria-hidden>·</span><dd>{approval.purchaseRequest.department.name}</dd></div>
+                      <div className="flex gap-1"><dt>Supplier</dt><dd className="text-foreground">{approval.purchaseRequest.supplierName ?? '—'}</dd></div>
+                      <div className="flex gap-1"><dt>Needed</dt><dd className="text-foreground">{formatDate(approval.purchaseRequest.requiredDate)}</dd></div>
+                      <div className="flex gap-1"><dt>Waiting</dt><dd className="text-foreground">{formatRelative(approval.activatedAt)}</dd></div>
+                    </dl>
                   </div>
-                  <div className="flex flex-col items-start gap-2 lg:items-end">
-                    <span className="text-lg font-semibold tabular-nums">{formatMoney(approval.purchaseRequest.totalAmount, approval.purchaseRequest.currency)}</span>
+                  <div className="flex flex-col items-start gap-2 border-t pt-4 lg:items-end lg:border-t-0 lg:border-l lg:pt-0 lg:pl-6">
+                    <span className="text-xs text-muted-foreground">Total amount</span>
+                    <span className="-mt-1.5 text-xl font-semibold tracking-tight tabular-nums">{formatMoney(approval.purchaseRequest.totalAmount, approval.purchaseRequest.currency)}</span>
                     <div className="flex gap-2">
                       <DecisionButtons approvalId={approval.id} requestId={approval.purchaseRequest.id} requestNumber={approval.purchaseRequest.requestNumber} />
                     </div>
@@ -80,10 +111,11 @@ export default function ApprovalsPage() {
           </div>
         </TabsContent>
         <TabsContent value="decided">
+          {decided.error ? <ErrorBlock error={decided.error} onRetry={() => void decided.refetch()} /> : null}
           {decided.isLoading ? <LoadingBlock rows={4} /> : null}
-          {decided.data?.data.length === 0 ? <EmptyState title="No decisions yet" /> : null}
+          {decided.data?.data.length === 0 ? <EmptyState icon={History} title="No decisions yet" description="Requests you approve or reject are listed here with your comments." /> : null}
           {decided.data?.data.length ? (
-            <Card>
+            <Card className="overflow-hidden">
               <Table>
                 <THead>
                   <TR>
@@ -99,12 +131,12 @@ export default function ApprovalsPage() {
                   {decided.data.data.map((row) => (
                     <TR key={row.id}>
                       <TD>
-                        <Link href={`/requests/${row.purchaseRequest.id}`} className="font-mono hover:underline">
+                        <Link href={`/requests/${row.purchaseRequest.id}`} className="font-mono text-[13px] font-semibold hover:text-primary hover:underline">
                           {row.purchaseRequest.requestNumber}
                         </Link>
                         <div className="max-w-56 truncate text-xs text-muted-foreground">{row.purchaseRequest.title}</div>
                       </TD>
-                      <TD>{row.approvalLevel}</TD>
+                      <TD className="tabular-nums">Level {row.approvalLevel}</TD>
                       <TD><DecisionBadge decision={row.decision} /></TD>
                       <TD className="text-right tabular-nums">{formatMoney(row.purchaseRequest.totalAmount, row.purchaseRequest.currency)}</TD>
                       <TD className="hidden max-w-64 truncate md:table-cell">{row.comments ?? '—'}</TD>

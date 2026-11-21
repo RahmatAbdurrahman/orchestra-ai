@@ -2,19 +2,21 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Permission } from '@orchestra/domain';
-import { FileUp, Loader2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Circle, Loader2, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { FileDropzone } from '@/components/file-dropzone';
 import { EmptyState, PageHeader } from '@/components/page';
 import { Button } from '@/components/ui/button';
-import { Alert, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, Textarea } from '@/components/ui/primitives';
+import { Alert, Card, CardContent, CardDescription, CardHeader, CardTitle, FieldMessage, Input, Label, Textarea } from '@/components/ui/primitives';
 import { api, errorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { formatBytes } from '@/lib/format';
+
 import type { PurchaseRequestDetail } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 const schema = z.object({
   title: z.string().trim().min(3, 'At least 3 characters').max(200),
@@ -23,6 +25,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 const ACCEPTED = '.pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg';
+const SUBMIT_STEPS = ['Creating request…', 'Uploading document…', 'Submitting for document intelligence…'];
 
 export default function NewRequestPage() {
   const { can, user } = useAuth();
@@ -72,15 +75,15 @@ export default function NewRequestPage() {
             <CardDescription>What do you need, and why?</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {error ? <Alert tone="danger">{error}</Alert> : null}
+            {error ? <Alert tone="danger"><AlertTriangle className="size-4" /><div>{error}</div></Alert> : null}
             <div className="space-y-2">
               <Label htmlFor="title">Title</Label>
               <Input id="title" placeholder="e.g. Ergonomic equipment for the operations team" {...form.register('title')} aria-invalid={!!form.formState.errors.title} />
-              {form.formState.errors.title ? <p className="text-xs text-destructive">{form.formState.errors.title.message}</p> : null}
+              {form.formState.errors.title ? <FieldMessage>{form.formState.errors.title.message}</FieldMessage> : null}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">Justification (optional)</Label>
-              <Textarea id="description" rows={4} placeholder="Business reason, project, cost centre…" {...form.register('description')} />
+              <div className="flex items-baseline justify-between"><Label htmlFor="description">Justification <span className="font-normal text-muted-foreground">(optional)</span></Label><span className="text-xs text-subtle-foreground tabular-nums">{(form.watch("description") ?? "").length}/2000</span></div>
+              <Textarea id="description" rows={6} placeholder="Business reason, project, cost centre…" {...form.register('description')} />
             </div>
           </CardContent>
         </Card>
@@ -91,33 +94,34 @@ export default function NewRequestPage() {
             <CardDescription>Invoice or quotation · PDF, PNG or JPEG · max 10 MB</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <label
-              htmlFor="document"
-              className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-8 text-center hover:bg-muted/40"
-            >
-              <FileUp className="size-6 text-muted-foreground" />
-              {file ? (
-                <span className="text-sm">
-                  <span className="font-medium">{file.name}</span>
-                  <span className="block text-xs text-muted-foreground">{formatBytes(file.size)}</span>
-                </span>
-              ) : (
-                <span className="text-sm text-muted-foreground">Click to choose a file</span>
-              )}
-              <input
-                id="document"
-                type="file"
-                accept={ACCEPTED}
-                className="sr-only"
-                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-                data-testid="document-input"
-              />
-            </label>
+            <FileDropzone file={file} onChange={setFile} accept={ACCEPTED} disabled={!!step} hint="PDF, PNG or JPEG" testId="document-input" />
             <Button type="submit" className="w-full" disabled={!!step}>
               {step ? <Loader2 className="animate-spin" /> : null}
               {step ?? 'Create & submit'}
             </Button>
-            <p className="text-xs text-muted-foreground">
+            {step ? (
+              <ol className="space-y-1.5 text-xs" aria-label="Submission progress">
+                {SUBMIT_STEPS.map((label, index) => {
+                  const current = SUBMIT_STEPS.indexOf(step);
+                  const state = index < current ? 'done' : index === current ? 'current' : 'todo';
+                  return (
+                    <li key={label} className={cn('flex items-center gap-2', state === 'todo' ? 'text-subtle-foreground' : 'text-foreground')}>
+                      {state === 'done' ? (
+                        <CheckCircle2 className="size-3.5 text-success-foreground" aria-hidden />
+                      ) : state === 'current' ? (
+                        <Loader2 className="size-3.5 animate-spin text-primary" aria-hidden />
+                      ) : (
+                        <Circle className="size-3.5" aria-hidden />
+                      )}
+                      {label.replace('…', '')}
+                      <span className="sr-only">{state === 'done' ? ' (done)' : state === 'current' ? ' (in progress)' : ''}</span>
+                    </li>
+                  );
+                })}
+              </ol>
+            ) : null}
+            <p className="flex gap-2 rounded-md bg-muted/60 p-3 text-xs leading-5 text-muted-foreground">
+              <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
               Extracted values are never used without your confirmation. Low-confidence fields must be checked explicitly.
             </p>
           </CardContent>
