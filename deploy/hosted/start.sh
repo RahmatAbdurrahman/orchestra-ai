@@ -1,11 +1,14 @@
 #!/bin/sh
-# Container entry point for the Hugging Face Space (see Dockerfile next to this file).
+# Container entry point for the hosted simulation backend (see Dockerfile next to this file).
 set -eu
 cd /repo
 
-: "${DATABASE_URL:?Set the DATABASE_URL secret in the Space settings}"
-: "${DOCUMENT_INTELLIGENCE_TOKEN:?Set the DOCUMENT_INTELLIGENCE_TOKEN secret in the Space settings}"
-: "${SEED_DEFAULT_PASSWORD:?Set the SEED_DEFAULT_PASSWORD secret in the Space settings}"
+# The host gives the listening port in PORT; the API reads API_PORT.
+export API_PORT="${PORT:-10000}"
+
+: "${DATABASE_URL:?Set the DATABASE_URL secret in the service environment}"
+: "${DOCUMENT_INTELLIGENCE_TOKEN:?Set the DOCUMENT_INTELLIGENCE_TOKEN secret in the service environment}"
+: "${SEED_DEFAULT_PASSWORD:?Set the SEED_DEFAULT_PASSWORD secret in the service environment}"
 mkdir -p "$UPLOAD_DIR"
 
 echo "[start] applying database migrations"

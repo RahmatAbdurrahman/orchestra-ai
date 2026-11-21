@@ -1,10 +1,11 @@
 # syntax=docker/dockerfile:1.7
-# Hugging Face Docker Space: Orchestra API + document intelligence in one container.
-#   - API (NestJS) listens on 7860, the port the Space exposes.
+# Hosted simulation backend (e.g. a Render web service): Orchestra API + document intelligence
+# in one container.
+#   - API (NestJS) listens on $PORT (set by the host; 10000 by default).
 #   - Document intelligence (FastAPI) listens on 127.0.0.1:8000, reachable only by the API.
 #   - Background jobs run in-process (QUEUE_DRIVER=inline); no Redis.
 #   - PostgreSQL is external (DATABASE_URL secret, e.g. Supabase session pooler).
-# The build context is the repository root (scripts/hf-space-push.sh assembles it).
+# Build context: the repository root. See docs/deployment-vercel-render.md.
 
 FROM node:22-bookworm-slim
 ENV PNPM_HOME=/pnpm \
@@ -48,12 +49,12 @@ RUN python3 -m venv /opt/di && /opt/di/bin/pip install ./services/document-intel
 COPY . .
 RUN pnpm --filter "./packages/*" run build && pnpm --filter @orchestra/api run build
 
-# Spaces run the container as uid 1000 (the "node" user in this image).
-RUN chmod +x deploy/huggingface/start.sh && mkdir -p /tmp/orchestra && chown -R node:node /repo /tmp/orchestra
+# Run as the unprivileged "node" user (uid 1000) of this image.
+RUN chmod +x deploy/hosted/start.sh && mkdir -p /tmp/orchestra && chown -R node:node /repo /tmp/orchestra
 USER node
 
 ENV NODE_ENV=development \
-    API_PORT=7860 \
+    PORT=10000 \
     QUEUE_DRIVER=inline \
     UPLOAD_DIR=/tmp/orchestra/uploads \
     DOCUMENT_INTELLIGENCE_URL=http://127.0.0.1:8000 \
@@ -61,5 +62,5 @@ ENV NODE_ENV=development \
     SWAGGER_ENABLED=false \
     OCR_ENGINE=tesseract
 
-EXPOSE 7860
-CMD ["deploy/huggingface/start.sh"]
+EXPOSE 10000
+CMD ["deploy/hosted/start.sh"]
