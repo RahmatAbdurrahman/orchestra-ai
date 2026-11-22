@@ -5,7 +5,7 @@ import { BRAND, orbiSvg, symbolSvg } from '@/lib/brand-art';
 
 /** Shared social preview card (Open Graph and Twitter), rendered once at build time. */
 export const OG_SIZE = { width: 1200, height: 630 };
-export const OG_ALT = `${BRAND.name}: ${BRAND.concept}. ${BRAND.description}`;
+export const OG_ALT = `${BRAND.name}, ${BRAND.tagline}. ${BRAND.slogan}`;
 
 const svgSrc = (svg: string) => `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
 
@@ -82,11 +82,23 @@ export async function renderOgCard() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', fontSize: 22, fontWeight: 500, color: colors.cyanLight, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              {BRAND.concept}
+            <div style={{ display: 'flex', fontSize: 20, fontWeight: 500, color: colors.cyanLight, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+              {BRAND.tagline}
             </div>
-            <div style={{ display: 'flex', marginTop: 16, fontFamily: 'Sora', fontWeight: 600, fontSize: 58, lineHeight: 1.08, letterSpacing: '-0.025em' }}>
-              Intelligent enterprise automation
+            {/* The slogan, one sentence per line; the second one carries the brand gradient. */}
+            <div style={{ display: 'flex', flexDirection: 'column', marginTop: 16, fontFamily: 'Sora', fontWeight: 600, fontSize: 56, lineHeight: 1.1, letterSpacing: '-0.025em' }}>
+              {BRAND.slogan.split('. ').map((sentence, index, all) => (
+                <span
+                  key={sentence}
+                  style={
+                    index === all.length - 1
+                      ? { backgroundImage: `linear-gradient(90deg, ${colors.sky}, ${colors.cyanLight})`, backgroundClip: 'text', color: 'transparent' }
+                      : {}
+                  }
+                >
+                  {index < all.length - 1 ? `${sentence}.` : sentence}
+                </span>
+              ))}
             </div>
             <div style={{ display: 'flex', marginTop: 20, fontSize: 25, lineHeight: 1.45, color: '#b6c2d6' }}>
               From purchase request to purchase order: documents read, approvals routed, UiPath robots in motion.

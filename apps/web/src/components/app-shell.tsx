@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/overlays';
 import { Atmosphere, type AtmosphereMotif, type AtmosphereVariant } from '@/components/atmosphere';
 import { OrchestraSymbol, Wordmark } from '@/components/brand';
+import { BRAND } from '@/lib/brand-art';
 import { RoleBadge } from '@/components/status-badge';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -326,7 +327,7 @@ function Brand({ collapsed }: { collapsed: boolean }) {
       <OrchestraSymbol className="size-8 transition-transform duration-300 group-hover/brand:rotate-[-8deg]" />
       <span className={cn('min-w-0 whitespace-nowrap', collapsed && 'sr-only')}>
         <Wordmark className="block text-[15px] leading-5" />
-        <span className="block text-[11px] leading-4 text-sidebar-muted">Enterprise automation</span>
+        <span className="block text-[11px] leading-4 text-sidebar-muted">{BRAND.taglineShort}</span>
       </span>
     </Link>
   );

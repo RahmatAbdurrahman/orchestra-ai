@@ -21,8 +21,8 @@ export const metadata: Metadata = {
   applicationName: BRAND.name,
   appleWebApp: { title: BRAND.name, statusBarStyle: 'black-translucent' },
   // og:image and twitter:image come from opengraph-image.tsx and twitter-image.tsx.
-  openGraph: { type: 'website', siteName: BRAND.name, title: `${BRAND.name} · ${BRAND.concept}`, description: BRAND.description },
-  twitter: { card: 'summary_large_image', title: `${BRAND.name} · ${BRAND.concept}`, description: BRAND.description },
+  openGraph: { type: 'website', siteName: BRAND.name, title: `${BRAND.name} · ${BRAND.tagline}`, description: BRAND.description },
+  twitter: { card: 'summary_large_image', title: `${BRAND.name} · ${BRAND.tagline}`, description: BRAND.description },
   formatDetection: { telephone: false },
 };
 

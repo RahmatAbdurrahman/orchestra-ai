@@ -10,8 +10,14 @@
 export const BRAND = Object.freeze({
   name: 'Orchestra AI',
   shortName: 'Orchestra',
+  /** Internal design concept behind the identity (not shown as a tagline). */
   concept: 'The Intelligent Conductor',
-  description: 'Intelligent enterprise automation: purchase requests, document intelligence, approvals and UiPath automation.',
+  /** Public tagline and slogan, identical to the product showcase end card. */
+  tagline: 'Intelligent Workflow Orchestration Platform',
+  taglineShort: 'Workflow orchestration',
+  slogan: 'Orchestrate Intelligence. Empower Decisions.',
+  description:
+    'Intelligent workflow orchestration platform for procurement: purchase requests, document intelligence, approvals and UiPath automation.',
   mascot: { name: 'ORBI', meaning: "Orchestra's Robotic Intelligence" },
   colors: {
     blue: '#2563EB',

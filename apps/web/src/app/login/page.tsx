@@ -196,7 +196,7 @@ function LoginForm() {
           className="animate-fade-in"
           symbolClassName="size-10"
           wordmarkClassName="text-xl leading-6"
-          tagline={BRAND.concept}
+          tagline={BRAND.tagline}
           taglineClassName="text-xs text-hero-subtle opacity-100"
         />
         {/* ORBI greets visitors: an onboarding moment only, never a status indicator. */}
@@ -243,7 +243,7 @@ function LoginForm() {
         <div className="w-full max-w-[26rem] animate-page-in space-y-4">
           <Card className="p-6 shadow-sm sm:p-7">
             <div className="mb-6 space-y-1.5">
-              <OrchestraLogo className="mb-5 lg:hidden" symbolClassName="size-8" wordmarkClassName="text-base" tagline={BRAND.concept} taglineClassName="text-muted-foreground opacity-100" />
+              <OrchestraLogo className="mb-5 lg:hidden" symbolClassName="size-8" wordmarkClassName="text-base" tagline={BRAND.tagline} taglineClassName="text-muted-foreground opacity-100" />
               <h2 className="font-display text-2xl font-semibold tracking-[-0.015em]">Sign in</h2>
               <p className="text-sm text-muted-foreground">Use your Orchestra account.</p>
             </div>
