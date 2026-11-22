@@ -3,18 +3,20 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { type RoleName } from '@orchestra/domain';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bot, CheckSquare, ChevronDown, ChevronRight, FileScan, Loader2, ShieldCheck, Users, Workflow, type LucideIcon } from 'lucide-react';
+import { Bot, CheckSquare, ChevronDown, ChevronRight, FileScan, Loader2, ShieldCheck, Users, type LucideIcon } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState, type CSSProperties } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { DotGrid, NetworkPattern, RadialGlow } from '@/components/atmosphere';
+import { Orbi, OrchestraLogo } from '@/components/brand';
 import { Collapse } from '@/components/motion';
 import { RoleBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Alert, Badge, Card, CardContent, FieldMessage, Input, Label, Skeleton } from '@/components/ui/primitives';
 import { api, errorMessage } from '@/lib/api';
 import { ME_QUERY_KEY } from '@/lib/auth';
+import { BRAND } from '@/lib/brand-art';
 import type { Me } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -190,14 +192,20 @@ function LoginForm() {
     <div className="grid min-h-dvh lg:grid-cols-[1.1fr_1fr]">
       <aside className="relative isolate hidden flex-col justify-between gap-8 overflow-hidden border-r border-hero-card-border bg-hero p-10 text-hero-foreground lg:flex xl:p-12 dark:border-transparent">
         <BrandAtmosphere />
-        <div className="flex animate-fade-in items-center gap-2.5">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.2),0_8px_20px_-8px_rgb(37_99_235/0.7)]">
-            <Workflow className="size-5" />
+        <OrchestraLogo
+          className="animate-fade-in"
+          symbolClassName="size-10"
+          wordmarkClassName="text-xl leading-6"
+          tagline={BRAND.concept}
+          taglineClassName="text-xs text-hero-subtle opacity-100"
+        />
+        {/* ORBI greets visitors: an onboarding moment only, never a status indicator. */}
+        <div className="pointer-events-none absolute top-5 right-5 z-10 hidden items-start gap-3 lg:flex xl:top-8 xl:right-10">
+          <div className="relative mt-6 hidden animate-fade-up rounded-2xl rounded-tr-sm border border-hero-card-border bg-hero-card px-3.5 py-2.5 shadow-[var(--hero-shadow)] [animation-delay:600ms] xl:block">
+            <p className="font-display text-sm font-semibold text-hero-foreground">Hi, I&apos;m {BRAND.mascot.name}.</p>
+            <p className="text-xs text-hero-muted">Your automation co-pilot.</p>
           </div>
-          <div>
-            <span className="block text-lg leading-5 font-semibold tracking-tight">Orchestra AI</span>
-            <span className="block text-xs text-hero-subtle">Intelligent workflow orchestration</span>
-          </div>
+          <Orbi expression="greeting" size={124} animated title={`${BRAND.mascot.name}, the ${BRAND.name} mascot, waving hello`} />
         </div>
 
         <div className="max-w-lg space-y-8">
@@ -205,7 +213,7 @@ function LoginForm() {
             <Badge className="border-hero-badge-border bg-hero-badge-bg text-hero-badge-fg">
               <span className="size-1.5 rounded-full bg-[var(--hero-pulse)]" aria-hidden /> Purchase request → purchase order
             </Badge>
-            <h1 className="text-3xl leading-tight font-semibold tracking-tight text-balance text-hero-foreground xl:text-[2.125rem]">
+            <h1 className="font-display text-3xl leading-tight font-semibold tracking-[-0.02em] text-balance text-hero-foreground xl:text-[2.125rem]">
               From purchase request to purchase order, with a human in control of every decision.
             </h1>
             <p className="max-w-md text-hero-muted">
@@ -235,13 +243,8 @@ function LoginForm() {
         <div className="w-full max-w-[26rem] animate-page-in space-y-4">
           <Card className="p-6 shadow-sm sm:p-7">
             <div className="mb-6 space-y-1.5">
-              <div className="mb-5 flex items-center gap-2.5 lg:hidden">
-                <span className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 text-white">
-                  <Workflow className="size-4" />
-                </span>
-                <span className="font-semibold tracking-tight">Orchestra AI</span>
-              </div>
-              <h2 className="text-2xl font-semibold tracking-tight">Sign in</h2>
+              <OrchestraLogo className="mb-5 lg:hidden" symbolClassName="size-8" wordmarkClassName="text-base" tagline={BRAND.concept} taglineClassName="text-muted-foreground opacity-100" />
+              <h2 className="font-display text-2xl font-semibold tracking-[-0.015em]">Sign in</h2>
               <p className="text-sm text-muted-foreground">Use your Orchestra account.</p>
             </div>
             <form onSubmit={onSubmit} className="space-y-4" noValidate>

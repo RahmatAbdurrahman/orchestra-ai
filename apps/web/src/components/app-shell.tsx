@@ -22,7 +22,6 @@ import {
   Sun,
   UserRound,
   Users,
-  Workflow,
   X,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -40,6 +39,7 @@ import {
   TooltipProvider,
 } from '@/components/ui/overlays';
 import { Atmosphere, type AtmosphereMotif, type AtmosphereVariant } from '@/components/atmosphere';
+import { OrchestraSymbol, Wordmark } from '@/components/brand';
 import { RoleBadge } from '@/components/status-badge';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -320,13 +320,12 @@ function Brand({ collapsed }: { collapsed: boolean }) {
   return (
     <Link
       href="/dashboard"
-      className="flex h-16 shrink-0 items-center gap-2.5 overflow-hidden px-5 text-sidebar-accent-foreground outline-none focus-visible:shadow-[inset_0_0_0_2px_var(--sidebar-indicator)]"
+      aria-label="Orchestra AI, go to the dashboard"
+      className="group/brand flex h-16 shrink-0 items-center gap-2.5 overflow-hidden px-5 text-sidebar-accent-foreground outline-none focus-visible:shadow-[inset_0_0_0_2px_var(--sidebar-indicator)]"
     >
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.2)]">
-        <Workflow className="size-4" aria-hidden />
-      </span>
+      <OrchestraSymbol className="size-8 transition-transform duration-300 group-hover/brand:rotate-[-8deg]" />
       <span className={cn('min-w-0 whitespace-nowrap', collapsed && 'sr-only')}>
-        <span className="block text-sm leading-4 font-semibold tracking-tight">Orchestra AI</span>
+        <Wordmark className="block text-[15px] leading-5" />
         <span className="block text-[11px] leading-4 text-sidebar-muted">Enterprise automation</span>
       </span>
     </Link>
@@ -420,6 +419,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             <IconButton label="Open menu" className="lg:hidden" onClick={() => setMobileOpen(true)}>
               <Menu />
             </IconButton>
+            <Link href="/dashboard" aria-label="Orchestra AI, go to the dashboard" className="rounded-md p-0.5 outline-none focus-visible:shadow-[var(--focus-ring)] lg:hidden">
+              <OrchestraSymbol className="size-7" />
+            </Link>
             <IconButton
               label={sidebar.collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               className="hidden lg:inline-flex"

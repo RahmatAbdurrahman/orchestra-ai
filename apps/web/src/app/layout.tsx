@@ -1,14 +1,22 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Sora } from 'next/font/google';
 import type { ReactNode } from 'react';
+import { BRAND } from '@/lib/brand-art';
 import { Providers } from './providers';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-inter' });
+// Only the two weights the identity uses: 700 for the wordmark, 600 for major headings.
+const sora = Sora({ subsets: ['latin'], weight: ['600', '700'], display: 'swap', variable: '--font-sora' });
 
+// Icons come from the file conventions next to this layout (icon.svg, apple-icon.tsx) and manifest.ts.
 export const metadata: Metadata = {
-  title: { default: 'Orchestra AI', template: '%s · Orchestra AI' },
-  description: 'Intelligent enterprise automation: purchase requests, document intelligence, approvals and UiPath automation.',
+  title: { default: BRAND.name, template: `%s · ${BRAND.name}` },
+  description: BRAND.description,
+  applicationName: BRAND.name,
+  appleWebApp: { title: BRAND.name, statusBarStyle: 'black-translucent' },
+  openGraph: { type: 'website', siteName: BRAND.name, title: `${BRAND.name} · ${BRAND.concept}`, description: BRAND.description },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {
@@ -24,7 +32,7 @@ const themeScript = `(() => { try { const t = localStorage.getItem('orchestra-th
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
+    <html lang="en" className={`${inter.variable} ${sora.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

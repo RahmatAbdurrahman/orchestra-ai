@@ -2,8 +2,9 @@
 
 import { Permission } from '@orchestra/domain';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Activity, Bot, CheckCircle2, FolderOpen, KeyRound, Loader2, MinusCircle, PlugZap, RefreshCw, Server, ShieldCheck, XCircle, type LucideIcon } from 'lucide-react';
-import { Fragment } from 'react';
+import { Activity, Bot, CheckCircle2, FolderOpen, KeyRound, Loader2, MinusCircle, PlugZap, RefreshCw, ShieldCheck, XCircle, type LucideIcon } from 'lucide-react';
+import { Fragment, type ComponentType } from 'react';
+import { OrchestraSymbol } from '@/components/brand';
 import { toast } from 'sonner';
 import { ErrorBlock, KeyValue, LoadingBlock, PageHeader } from '@/components/page';
 import { Button } from '@/components/ui/button';
@@ -40,8 +41,8 @@ function StateIcon({ state, className }: { state: StepState; className?: string 
 /** Connected-node view of the UiPath connection, coloured only by the states the API returned. */
 function ConnectionChain({ health }: { health: UiPathHealth }) {
   const states = chainStates(health);
-  const nodes: Array<{ label: string; detail: string; icon: LucideIcon; state: StepState | 'origin' }> = [
-    { label: 'Orchestra API', detail: 'This server', icon: Server, state: 'origin' },
+  const nodes: Array<{ label: string; detail: string; icon: LucideIcon | ComponentType<{ className?: string }>; state: StepState | 'origin' }> = [
+    { label: 'Orchestra API', detail: 'This server', icon: OrchestraSymbol, state: 'origin' },
     { label: 'Credentials', detail: 'Client ID and secret', icon: KeyRound, state: states[0]! },
     { label: 'Access token', detail: 'OAuth client credentials', icon: ShieldCheck, state: states[1]! },
     { label: 'Folder', detail: health.folderId ? `Folder ${health.folderId}` : 'Not set', icon: FolderOpen, state: states[2]! },
@@ -80,7 +81,7 @@ function ConnectionChain({ health }: { health: UiPathHealth }) {
                 node.state === 'skipped' && 'bg-muted text-subtle-foreground',
               )}
             >
-              <node.icon className="size-3.5" aria-hidden />
+              <node.icon className="size-3.5" />
             </span>
             <span className="min-w-0 flex-1 sm:w-full">
               <span className="block truncate text-[13px] leading-4 font-medium sm:whitespace-normal">{node.label}</span>
@@ -254,8 +255,8 @@ export default function IntegrationsPage() {
             {system.data ? (
               <div aria-live="polite">
                 <div className="flex items-center gap-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5">
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary dark:text-info-foreground">
-                    <Server className="size-4" aria-hidden />
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-card ring-1 ring-border-interactive dark:ring-primary/20">
+                    <OrchestraSymbol className="size-5" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-medium">Orchestra API</span>

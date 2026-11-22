@@ -100,6 +100,7 @@ export default function RequestsPage() {
       {requests.isLoading ? <LoadingBlock rows={6} label="Loading purchase requests" /> : null}
       {requests.data && requests.data.data.length === 0 ? (
         <EmptyState
+          mascot={query || status ? 'thinking' : 'document'}
           icon={query || status ? SearchX : FileText}
           title={query || status ? 'No matching purchase requests' : 'No purchase requests yet'}
           description={

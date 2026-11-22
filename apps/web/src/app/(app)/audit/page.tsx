@@ -63,6 +63,7 @@ export default function AuditPage() {
       {audit.isLoading ? <LoadingBlock rows={8} label="Loading audit events" /> : null}
       {audit.data?.data.length === 0 ? (
         <EmptyState
+          mascot={action ? 'thinking' : 'default'}
           icon={ScrollText}
           title={action ? 'No events in this category' : 'No audit events'}
           description={action ? 'Choose another category, or show all events.' : 'Events you are allowed to see are recorded here as work happens.'}

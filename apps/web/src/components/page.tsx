@@ -2,6 +2,7 @@
 
 import { AlertTriangle, ChevronLeft, ChevronRight, Inbox, RotateCw, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { Orbi, type OrbiExpression } from '@/components/brand';
 import { MOTION } from '@/components/motion';
 import { Button } from '@/components/ui/button';
 import { Alert, Card, CardContent, Skeleton } from '@/components/ui/primitives';
@@ -24,6 +25,7 @@ export function PageHeader({
   actions,
   eyebrow,
   icon,
+  leading,
 }: {
   title: ReactNode;
   description?: ReactNode;
@@ -31,14 +33,16 @@ export function PageHeader({
   eyebrow?: ReactNode;
   /** Module icon (decorative), shown from the sm breakpoint. */
   icon?: LucideIcon;
+  /** Custom leading visual (e.g. ORBI on the dashboard); replaces the icon tile. */
+  leading?: ReactNode;
 }) {
   return (
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between lg:mb-8">
       <div className="flex min-w-0 items-start gap-4">
-        {icon ? <HeaderIcon icon={icon} /> : null}
+        {leading ? <div className="hidden shrink-0 sm:block">{leading}</div> : icon ? <HeaderIcon icon={icon} /> : null}
         <div className="min-w-0 space-y-1.5">
           {eyebrow ? <div className="text-xs font-medium tracking-wide text-muted-foreground">{eyebrow}</div> : null}
-          <h1 className="text-xl leading-tight font-semibold tracking-tight text-balance sm:text-2xl">{title}</h1>
+          <h1 className="font-display text-xl leading-tight font-semibold tracking-[-0.015em] text-balance sm:text-2xl">{title}</h1>
           {description ? <p className="max-w-3xl text-sm leading-6 text-pretty text-muted-foreground">{description}</p> : null}
         </div>
       </div>
@@ -143,12 +147,46 @@ function EmptyIllustration({ icon: Icon, tone }: { icon: LucideIcon; tone: keyof
   );
 }
 
+/** ORBI on a soft brand glow, for empty states and onboarding moments. */
+function MascotIllustration({ expression }: { expression: OrbiExpression }) {
+  return (
+    <span aria-hidden className="relative mb-1 flex size-28 items-center justify-center">
+      <span className="absolute inset-2 rounded-full bg-[radial-gradient(closest-side,color-mix(in_oklab,var(--brand-cyan)_16%,transparent),transparent)]" />
+      <Orbi expression={expression} size={104} className="relative" />
+    </span>
+  );
+}
+
+/**
+ * Page-level failure (the page's own data could not be loaded). Shows the real error message;
+ * ORBI only sets the tone. Inline errors inside a page keep using ErrorBlock.
+ */
+export function ErrorState({ error, onRetry, title = 'This page could not be loaded' }: { error: unknown; onRetry?: () => void; title?: string }) {
+  return (
+    <Card className="relative overflow-hidden border-destructive-border">
+      <CardContent className="flex flex-col items-center gap-2 px-6 py-10 text-center">
+        <Orbi expression="error" size={104} />
+        <h1 className="font-display text-base font-semibold">{title}</h1>
+        <p className="max-w-md text-sm text-muted-foreground" role="alert">
+          {errorMessage(error)}
+        </p>
+        {onRetry ? (
+          <Button variant="outline" size="sm" className="mt-2" onClick={onRetry}>
+            <RotateCw /> Try again
+          </Button>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function EmptyState({
   title,
   description,
   action,
   icon = Inbox,
   tone = 'default',
+  mascot,
   compact,
   className,
 }: {
@@ -157,12 +195,14 @@ export function EmptyState({
   action?: ReactNode;
   icon?: LucideIcon;
   tone?: keyof typeof EMPTY_TONES;
+  /** Show ORBI with this expression instead of the icon composition (full-size empty states). */
+  mascot?: OrbiExpression;
   compact?: boolean;
   className?: string;
 }) {
   const body = (
-    <div className={cn('flex animate-fade-up flex-col items-center gap-1.5 text-center', compact ? 'py-6' : 'py-12')}>
-      <EmptyIllustration icon={icon} tone={tone} />
+    <div className={cn('flex animate-fade-up flex-col items-center gap-1.5 text-center', compact ? 'py-6' : mascot ? 'py-9' : 'py-12')}>
+      {mascot ? <MascotIllustration expression={mascot} /> : <EmptyIllustration icon={icon} tone={tone} />}
       <p className="text-sm font-semibold">{title}</p>
       {description ? <p className="max-w-sm text-[13px] leading-5 text-pretty text-muted-foreground">{description}</p> : null}
       {action ? <div className="mt-3">{action}</div> : null}

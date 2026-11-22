@@ -6,7 +6,7 @@ import { ArrowLeft, Ban, Bot, CheckCircle2, Circle, Play, Timer, XCircle } from 
 import Link from 'next/link';
 import { Fragment, use } from 'react';
 import { toast } from 'sonner';
-import { ErrorBlock, KeyValue, LoadingBlock, PageHeader } from '@/components/page';
+import { ErrorState, KeyValue, LoadingBlock, PageHeader } from '@/components/page';
 import { ReasonDialog, RetryButton } from '@/components/requests/action-dialogs';
 import { JobStatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
@@ -94,7 +94,7 @@ export default function AutomationJobPage({ params }: { params: Promise<{ id: st
   });
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['automation'] });
 
-  if (job.error) return <ErrorBlock error={job.error} />;
+  if (job.error) return <ErrorState error={job.error} onRetry={() => void job.refetch()} title="This automation job could not be loaded" />;
   if (!job.data) return <LoadingBlock rows={8} />;
   const data = job.data;
 

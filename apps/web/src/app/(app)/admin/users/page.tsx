@@ -157,7 +157,7 @@ export default function UsersPage() {
       {users.error ? <ErrorBlock error={users.error} onRetry={() => void users.refetch()} /> : null}
       {users.isLoading ? <LoadingBlock rows={6} label="Loading users" /> : null}
       {users.data && users.data.data.length === 0 ? (
-        <EmptyState icon={UserX} title="No matching users" description={query ? `Nobody matches “${query}”. Try another name or email.` : 'Create the first user account.'} />
+        <EmptyState mascot="thinking" icon={UserX} title="No matching users" description={query ? `Nobody matches “${query}”. Try another name or email.` : 'Create the first user account.'} />
       ) : null}
       {users.data && users.data.data.length > 0 ? (
         <Card className="relative overflow-hidden">

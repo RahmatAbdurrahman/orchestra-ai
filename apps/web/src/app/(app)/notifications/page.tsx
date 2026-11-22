@@ -58,7 +58,7 @@ export default function NotificationsPage() {
       {notifications.error ? <ErrorBlock error={notifications.error} onRetry={() => void notifications.refetch()} /> : null}
       {notifications.isLoading ? <LoadingBlock rows={6} label="Loading notifications" /> : null}
       {notifications.data?.data.length === 0 ? (
-        <EmptyState icon={BellOff} title="No notifications" description="Approval requests, decisions and automation results addressed to you will appear here." />
+        <EmptyState mascot="default" icon={BellOff} title="No notifications" description="Approval requests, decisions and automation results addressed to you will appear here." />
       ) : null}
       {notifications.data?.data.length ? (
         <Card className="stagger divide-y overflow-hidden">

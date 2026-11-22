@@ -7,7 +7,8 @@ import Link from 'next/link';
 import { use, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { EventIcon } from '@/components/event-icon';
-import { EmptyState, ErrorBlock, KeyValue, LoadingBlock, PageHeader } from '@/components/page';
+import { Orbi } from '@/components/brand';
+import { EmptyState, ErrorState, KeyValue, LoadingBlock, PageHeader } from '@/components/page';
 import { DecisionButtons, ReasonDialog, RetryButton } from '@/components/requests/action-dialogs';
 import { ProgressSteps } from '@/components/requests/progress-steps';
 import { RuleFindings } from '@/components/requests/rule-findings';
@@ -61,9 +62,12 @@ function DocumentCard({ document, threshold, onReprocess, canReprocess }: { docu
       </CardHeader>
       <CardContent className="space-y-3">
         {document.processingStatus === 'QUEUED' || document.processingStatus === 'PROCESSING' ? (
-          <p className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" /> Document intelligence is reading the document…
-          </p>
+          <div className="flex items-center gap-3 rounded-lg border border-info-border bg-info-soft/50 px-3 py-2 text-sm text-muted-foreground dark:bg-info/6">
+            <Orbi expression="document" size={44} animated className="-my-1" />
+            <span className="flex items-center gap-2">
+              <Loader2 className="size-4 animate-spin text-info-foreground" aria-hidden /> Document intelligence is reading the document…
+            </span>
+          </div>
         ) : null}
         {extraction ? (
           <>
@@ -159,7 +163,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
     onError: (error) => toast.error(errorMessage(error)),
   });
 
-  if (request.error) return <ErrorBlock error={request.error} />;
+  if (request.error) return <ErrorState error={request.error} onRetry={() => void request.refetch()} title="This purchase request could not be loaded" />;
   if (!request.data) return <LoadingBlock rows={8} />;
   const pr = request.data;
   const actions = pr.allowedActions;

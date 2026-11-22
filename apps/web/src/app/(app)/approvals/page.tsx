@@ -90,7 +90,7 @@ export default function ApprovalsPage() {
           {pending.error ? <ErrorBlock error={pending.error} onRetry={() => void pending.refetch()} /> : null}
           {pending.isLoading ? <LoadingBlock rows={4} label="Loading approvals" /> : null}
           {pending.data?.length === 0 ? (
-            <EmptyState icon={CheckCheck} tone="success" title="You're all caught up" description="Nothing is waiting for your decision. New approval requests will appear here and in your notifications." />
+            <EmptyState mascot="success" icon={CheckCheck} tone="success" title="You're all caught up" description="Nothing is waiting for your decision. New approval requests will appear here and in your notifications." />
           ) : null}
           <div className="stagger grid gap-3">
             {pending.data?.map((approval) => (
@@ -132,7 +132,7 @@ export default function ApprovalsPage() {
         <TabsContent value="decided">
           {decided.error ? <ErrorBlock error={decided.error} onRetry={() => void decided.refetch()} /> : null}
           {decided.isLoading ? <LoadingBlock rows={4} /> : null}
-          {decided.data?.data.length === 0 ? <EmptyState icon={History} title="No decisions yet" description="Requests you approve or reject are listed here with your comments." /> : null}
+          {decided.data?.data.length === 0 ? <EmptyState mascot="approval" icon={History} title="No decisions yet" description="Requests you approve or reject are listed here with your comments." /> : null}
           {decided.data?.data.length ? (
             <Card className="overflow-hidden">
               <Table>

@@ -6,6 +6,7 @@ import { Activity, AlertTriangle, BarChart3, Bot, CheckCircle2, Clock, FileText,
 import Link from 'next/link';
 import { useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Orbi } from '@/components/brand';
 import { EventIcon } from '@/components/event-icon';
 import { MOTION } from '@/components/motion';
 import { EmptyState, ErrorBlock, LoadingBlock, PageHeader, SectionLabel, StatCard } from '@/components/page';
@@ -99,6 +100,7 @@ export default function DashboardPage() {
     <>
       <PageHeader
         icon={LayoutDashboard}
+        leading={<Orbi expression="greeting" size={60} className="-my-2" />}
         eyebrow={new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
         title={`Welcome back, ${user.name.split(' ')[0]}`}
         description={`${scopeLabel} · automation overview for the ${periodLabel}`}

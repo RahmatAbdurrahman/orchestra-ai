@@ -130,6 +130,7 @@ export default function AutomationPage() {
       {jobs.isLoading ? <LoadingBlock rows={6} label="Loading automation jobs" /> : null}
       {jobs.data?.data.length === 0 ? (
         <EmptyState
+          mascot={status ? 'thinking' : 'default'}
           icon={Bot}
           title={status ? 'No jobs with this status' : 'No automation jobs yet'}
           description={status ? 'Choose another status to see more jobs.' : 'A UiPath job is created when a purchase request is fully approved.'}
