@@ -118,11 +118,20 @@ Rules:
 
 - **`icon.svg`:** the symbol on a navy tile, legible in light and dark browser chrome.
 - **`apple-icon`:** a 180 × 180 PNG generated from the same SVG.
-- **Social preview (`opengraph-image`, `twitter-image`):** a 1200 × 630 PNG rendered at build time
-  by [`apps/web/src/lib/og-card.tsx`](../apps/web/src/lib/og-card.tsx): the logo, the tagline, the
-  slogan and ORBI greeting on navy. The fonts come from `@fontsource/sora` and `@fontsource/inter`, because
-  the image renderer cannot read WOFF2. Absolute image URLs use `metadataBase`, which is the Vercel
-  production domain, or `NEXT_PUBLIC_SITE_URL` when it is set.
+- **Social preview (`/og-image`):** a 1200 × 630 PNG rendered at build time and used for both
+  `og:image` and `twitter:image`. It shows the logo, the tagline, the slogan and ORBI greeting on
+  navy.
+  - **What is drawn:** [`apps/web/src/lib/og-card-element.tsx`](../apps/web/src/lib/og-card-element.tsx)
+    defines the card. [`apps/web/src/lib/og-card.tsx`](../apps/web/src/lib/og-card.tsx) renders it to
+    PNG.
+  - **Cache busting:** the image URL ends in `?v=<version>`. The version is a hash of everything the
+    card draws: its text, styles, brand art, size and font files. When any of these change, the URL
+    changes too, so WhatsApp, LinkedIn, Slack and X fetch the new image on their next scrape instead
+    of reusing the cached one. There is nothing to bump by hand.
+  - **Fonts:** they come from `@fontsource/sora` and `@fontsource/inter`, because the image renderer
+    cannot read WOFF2.
+  - **Absolute URLs:** they use `metadataBase`, which is the Vercel production domain, or
+    `NEXT_PUBLIC_SITE_URL` when that is set.
 - **`manifest.webmanifest`:** name "Orchestra AI", short name "Orchestra", start URL
   `/dashboard`, navy theme colour.
 - **Metadata:** title template `%s · Orchestra AI`, application name, Open Graph site name and

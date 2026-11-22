@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter, Sora } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { BRAND } from '@/lib/brand-art';
+import { OG_IMAGE } from '@/lib/og-card-element';
 import { Providers } from './providers';
 import './globals.css';
 
@@ -20,9 +21,9 @@ export const metadata: Metadata = {
   description: BRAND.description,
   applicationName: BRAND.name,
   appleWebApp: { title: BRAND.name, statusBarStyle: 'black-translucent' },
-  // og:image and twitter:image come from opengraph-image.tsx and twitter-image.tsx.
-  openGraph: { type: 'website', siteName: BRAND.name, title: `${BRAND.name} · ${BRAND.tagline}`, description: BRAND.description },
-  twitter: { card: 'summary_large_image', title: `${BRAND.name} · ${BRAND.tagline}`, description: BRAND.description },
+  // The image URL carries a content version (lib/og-card-element.tsx), so caches refresh when the card changes.
+  openGraph: { type: 'website', siteName: BRAND.name, title: `${BRAND.name} · ${BRAND.tagline}`, description: BRAND.description, images: [OG_IMAGE] },
+  twitter: { card: 'summary_large_image', title: `${BRAND.name} · ${BRAND.tagline}`, description: BRAND.description, images: [OG_IMAGE] },
   formatDetection: { telephone: false },
 };
 
