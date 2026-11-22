@@ -9,13 +9,20 @@ const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-int
 // Only the two weights the identity uses: 700 for the wordmark, 600 for major headings.
 const sora = Sora({ subsets: ['latin'], weight: ['600', '700'], display: 'swap', variable: '--font-sora' });
 
+// Absolute base for og:image / twitter:image URLs: the production domain on Vercel, localhost otherwise.
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+  ?? (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : 'http://localhost:3000');
+
 // Icons come from the file conventions next to this layout (icon.svg, apple-icon.tsx) and manifest.ts.
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: { default: BRAND.name, template: `%s · ${BRAND.name}` },
   description: BRAND.description,
   applicationName: BRAND.name,
   appleWebApp: { title: BRAND.name, statusBarStyle: 'black-translucent' },
+  // og:image and twitter:image come from opengraph-image.tsx and twitter-image.tsx.
   openGraph: { type: 'website', siteName: BRAND.name, title: `${BRAND.name} · ${BRAND.concept}`, description: BRAND.description },
+  twitter: { card: 'summary_large_image', title: `${BRAND.name} · ${BRAND.concept}`, description: BRAND.description },
   formatDetection: { telephone: false },
 };
 

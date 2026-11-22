@@ -109,6 +109,11 @@ Rules:
 
 - **`icon.svg`:** the symbol on a navy tile, legible in light and dark browser chrome.
 - **`apple-icon`:** a 180 × 180 PNG generated from the same SVG.
+- **Social preview (`opengraph-image`, `twitter-image`):** a 1200 × 630 PNG rendered at build time
+  by [`apps/web/src/lib/og-card.tsx`](../apps/web/src/lib/og-card.tsx): the logo, the concept line
+  and ORBI greeting on navy. The fonts come from `@fontsource/sora` and `@fontsource/inter`, because
+  the image renderer cannot read WOFF2. Absolute image URLs use `metadataBase`, which is the Vercel
+  production domain, or `NEXT_PUBLIC_SITE_URL` when it is set.
 - **`manifest.webmanifest`:** name "Orchestra AI", short name "Orchestra", start URL
   `/dashboard`, navy theme colour.
 - **Metadata:** title template `%s · Orchestra AI`, application name, Open Graph site name and
